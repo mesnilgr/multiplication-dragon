@@ -3,7 +3,7 @@
 Jeu de course de dragons en 3D pour apprendre le calcul mental (GS → CM2), pensé pour iPad.
 
 - Plane à travers les anneaux et bats les dragons rivaux.
-- Deux circuits au choix : **Les Îles volantes** et **Paris** (Arc de Triomphe, Champs-Élysées, tour Eiffel, Seine, Concorde, Louvre, Notre-Dame, Sacré-Cœur). Chaque circuit est un fichier de `circuits/`, chargé juste avant la course.
+- Quatre circuits : **Les Îles volantes**, **Paris** (Arc de Triomphe, tour Eiffel, Seine, Louvre, Notre-Dame, Sacré-Cœur), **San Francisco** (Golden Gate, Alcatraz, collines, cable cars ; 30 ⭐) et **Washington** (Capitole, Washington Monument, Maison-Blanche, Lincoln, cerisiers ; 60 ⭐). Chaque circuit est un fichier de `circuits/`, chargé juste avant la course.
 - Huit dragons avec leurs compétences (vitesse, maniabilité, turbo). Quatre dragons spéciaux se débloquent avec les étoiles gagnées en course (3 ⭐ pour une victoire, +1 ⭐ pour un sans-faute).
 - Tous les 6 anneaux, une question de calcul : chaque bonne réponse donne un turbo, plus fort quand on enchaîne les bonnes réponses.
 - Pas de chronomètre visible. Le temps de réponse est mesuré discrètement pour l'espace parents.
@@ -15,7 +15,7 @@ Jeu de course de dragons en 3D pour apprendre le calcul mental (GS → CM2), pen
 
 ## Ajouter un circuit
 
-Créer `circuits/mon-circuit.js` qui exporte `{laps, cp, tight, build(W, ctx), tick(t)}` (voir `circuits/paris.js`), puis l'ajouter à la liste `CIRCUITS` dans `index.html`.
+Créer `circuits/mon-circuit.js` qui exporte `{laps, cp, tight, build(W, ctx), tick(t)}` (voir `circuits/paris.js`, ou `circuits/kit.js` pour les outils partagés), puis l'ajouter à la liste `CIRCUITS` dans `index.html`.
 
 ## Jouer
 

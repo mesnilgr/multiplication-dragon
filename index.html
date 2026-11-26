@@ -127,8 +127,9 @@ button:focus-visible{outline:4px solid var(--sun);outline-offset:3px}
 #dinfo .bar{letter-spacing:2px;color:#ff8a3d;font-size:15px}
 #dinfo .bar s{color:#dcd3ee;text-decoration:none}
 #circs{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.cc{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:16px;background:#f3edff;font:600 17px Fredoka,sans-serif;box-shadow:0 3px 0 #d3c3e8;text-align:left}
+.cc{display:flex;align-items:center;gap:8px;padding:5px 9px;border-radius:16px;background:#f3edff;font:600 17px Fredoka,sans-serif;box-shadow:0 3px 0 #d3c3e8;text-align:left}
 .cc b{font-size:28px}.cc small{display:block;font:600 12px Andika,sans-serif;color:#7a6aa0}
+.cc.lock{opacity:.8}.cc.lock b{filter:grayscale(1)}
 .cc.sel{background:#fff0a8;box-shadow:0 3px 0 #e8c64a;outline:3px solid var(--ink)}
 .lbar{height:18px;border-radius:10px;background:#efe6ff;margin:14px auto 8px;max-width:380px;overflow:hidden;position:relative}
 .lbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--sun),var(--pink));border-radius:10px;transition:width .25s}
@@ -572,8 +573,10 @@ function clearWorld(){world.traverse(o=>{if(o.geometry)o.geometry.dispose();cons
   ms.forEach(m=>{if(m===oceanMat)return;for(const k in m){const v=m[k];if(v&&v.isTexture&&v!==cloudTex)v.dispose()}m.dispose()})});world.clear();WF=null;CRY=[]}
 /* ---------- Catalogue des circuits ---------- */
 const CIRCUITS=[
-  {id:'iles',name:'Les Îles volantes',emoji:'🏝️',laps:3,cp:[[0,40,0],[150,45,-30],[280,62,30],[330,50,170],[250,28,290],[110,55,330],[-30,75,270],[-90,45,160],[-210,30,190],[-320,50,90],[-300,66,-60],[-170,40,-110],[-70,34,-60]].map(p=>[p[0]*.85,p[1],p[2]*.85]),build:buildIles,ocean:true},
-  {id:'paris',name:'Paris',emoji:'🗼',laps:2,src:'circuits/paris.js'}];
+  {id:'iles',name:'Les Îles volantes',emoji:'🏝️',sub:'Îles, cascades et cristaux',star:0,laps:3,cp:[[0,40,0],[150,45,-30],[280,62,30],[330,50,170],[250,28,290],[110,55,330],[-30,75,270],[-90,45,160],[-210,30,190],[-320,50,90],[-300,66,-60],[-170,40,-110],[-70,34,-60]].map(p=>[p[0]*.85,p[1],p[2]*.85]),build:buildIles,ocean:true},
+  {id:'paris',name:'Paris',emoji:'🗼',sub:'Tour Eiffel, Arc de Triomphe…',star:0,laps:2,src:'circuits/paris.js'},
+  {id:'sf',name:'San Francisco',emoji:'🌉',sub:'Golden Gate, Alcatraz…',star:30,laps:2,src:'circuits/sanfrancisco.js'},
+  {id:'dc',name:'Washington',emoji:'🏛️',sub:'Capitole, Maison-Blanche…',star:60,laps:2,src:'circuits/washington.js'}];
 let CIRCUIT=null;
 const CTX={THREE,get W(){return world},get L(){return L},SP,F,frame,worldAt,distToTrack,distToTrack2D,nearestS,part,merge,makeBB,BBcloud,BBglow,cloudTex,islandGeo,fbm,hx,dummy,oceanMat,trackGlows,scene,renderer,
   step:p=>new Promise(r=>{loadProg(p);requestAnimationFrame(()=>setTimeout(r,0))})};
@@ -581,7 +584,7 @@ function loadProg(p){const b=document.getElementById('lbar');if(b)b.style.width=
 async function loadCircuit(id){const c=CIRCUITS.find(x=>x.id===id)||CIRCUITS[0];if(CIRCUIT===c)return c;
   if(c.src&&!c.mod){loadProg(.1);c.mod=(await import('./'+c.src)).default}
   loadProg(.35);await CTX.step(.35);
-  clearWorld();const def=c.mod||c;setTrack(def.cp||c.cp,def.tight);LAPS=def.laps||c.laps||3;ocean.visible=!!(def.ocean??c.ocean);
+  clearWorld();const def=c.mod||c;setTrack(def.cp||c.cp,def.tight);LAPS=def.laps||c.laps||3;ocean.visible=!!(def.ocean??c.ocean);ocean.position.y=def.oceanY??-95;
   await (def.build||c.build)(CTX.W===world?world:world,CTX);c.tick=def.tick?def.tick.bind(def):null;CIRCUIT=c;loadProg(1);return c}
 {const c=CIRCUITS[0];setTrack(c.cp);LAPS=c.laps;buildIles(world);CIRCUIT=c}
 
@@ -933,10 +936,10 @@ function showEnd(){state='end';$('hud').classList.add('hide');$('quiz').classLis
   const rev=[...new Set(stats.filter(s=>!s.ok).map(s=>s.s))].slice(0,5);$('eRev').textContent=rev.length?'On les reverra bientôt : '+rev.join(' · '):(stats.length?'Aucune erreur, champion !':'');
   const best=store.get('best',9);if(place<best)store.set('best',place);
   const allOk=stats.length>0&&ok===stats.length,earn=[3,2,1,1][place-1]+(allOk?1:0),before=STARS;STARS+=earn;store.set('stars',STARS);
-  const unl=DRAG.filter(d=>d.star>before&&d.star<=STARS);
-  $('eStars').innerHTML=`+${earn} ⭐ ${allOk?'(dont 1 pour le sans-faute !)':''} · Total : ${STARS} ⭐`+unl.map(d=>`<span class="unl">🔓 Nouveau dragon débloqué : ${d.name} !</span>`).join('');
+  const unl=[...DRAG,...CIRCUITS.map(c=>({...c,name:'le circuit '+c.name}))].filter(d=>d.star>before&&d.star<=STARS);
+  $('eStars').innerHTML=`+${earn} ⭐ ${allOk?'(dont 1 pour le sans-faute !)':''} · Total : ${STARS} ⭐`+unl.map(d=>`<span class="unl">🔓 Débloqué : ${d.name} !</span>`).join('');
   if(unl.length){setTimeout(()=>{SFX.unlock();speak(`Incroyable ! Tu as débloqué ${unl.map(d=>d.name).join(' et ')} !`)},2600)}
-  else{const nx=DRAG.find(d=>d.star>STARS);if(nx)$('eStars').innerHTML+=`<span style="display:block;font-size:16px;color:#7a6aa0">Encore ${nx.star-STARS} ⭐ pour ${nx.name}</span>`}
+  else{const nx=[...DRAG,...CIRCUITS.map(c=>({...c,name:c.name}))].filter(d=>d.star>STARS).sort((a,b)=>a.star-b.star)[0];if(nx)$('eStars').innerHTML+=`<span style="display:block;font-size:16px;color:#7a6aa0">Encore ${nx.star-STARS} ⭐ pour ${nx.name}</span>`}
   $('end').classList.remove('hide')}
 
 /* ---------- Caméra ---------- */
@@ -993,7 +996,7 @@ function refreshMenu(){
   $('stars').textContent='⭐ '+STARS;
   $('drags').innerHTML=DRAG.map((d,i)=>{const o=isOpen(d),nw=o&&d.star>0&&!seenNew.includes(d.name);return`<button class="dc${i===viewIdx?' sel':''}${o?'':' lock'}${nw?' new':''}" data-i="${i}"><i style="background:${d.spec||d.css}"></i>${d.name}${o?'':`<span class="lk">🔒 ${d.star}⭐</span>`}</button>`}).join('');
   const d=DRAG[viewIdx];$('dinfo').innerHTML=`<div class="dn">${d.name} <small style="font:600 14px Andika;color:#7a6aa0">— ${d.desc}</small></div><span>Vitesse</span><span class="bar">${bars(d.v)}</span><span>Maniabilité</span><span class="bar">${bars(d.m)}</span><span>Turbo</span><span class="bar">${bars(d.t)}</span>`+(isOpen(d)?'':`<div class="dn" style="font-size:16px;color:#c2410c">🔒 Encore ${d.star-STARS} ⭐ pour le débloquer</div>`);
-  $('circs').innerHTML=CIRCUITS.map(c=>`<button class="cc${c.id===SET.circ?' sel':''}" data-c="${c.id}"><b>${c.emoji}</b><span>${c.name}<small>${c.id==='paris'?'Tour Eiffel, Arc de Triomphe…':'Îles, cascades et cristaux'}</small></span></button>`).join('');
+  $('circs').innerHTML=CIRCUITS.map(c=>{const o=STARS>=c.star;return`<button class="cc${c.id===SET.circ?' sel':''}${o?'':' lock'}" data-c="${c.id}"><b>${c.emoji}</b><span>${c.name}<small>${o?c.sub:`🔒 ${c.star} ⭐ pour débloquer`}</small></span></button>`}).join('');
   $('play').textContent=isOpen(d)?'C\'est parti !':`Jouer avec ${DRAG[SET.color].name}`;
   const fr=frontier();$('lvl').innerHTML=`<b>${fr.name}</b> · ${LV[fr.lv]}`;
   const best=store.get('best',9);if(!$('note').dataset.msg)$('note').textContent=best<9?`Ton record : ${['🏆 1er','🥈 2e','🥉 3e','🏅 4e'][best-1]}`:''}
@@ -1001,10 +1004,10 @@ $('drags').onclick=e=>{const b=e.target.closest('.dc');if(!b)return;SFX.tap();co
   if(isOpen(d)){SET.color=i;store.set('color',i);SET.name=d.name;if(d.star>0&&!seenNew.includes(d.name)){seenNew.push(d.name);store.set('seen',seenNew)}speak(`${d.name} ! ${d.desc}.`)}
   else speak(`${d.name} ! Il te faut ${d.star} étoiles pour le débloquer. Tu en as ${STARS}.`);
   refreshMenu();makeRacers();setTimeout(roarShow,250)};
-$('circs').onclick=e=>{const b=e.target.closest('.cc');if(!b)return;SFX.tap();SET.circ=b.dataset.c;store.set('circ',SET.circ);const c=CIRCUITS.find(x=>x.id===SET.circ);speak(c.name+' !');refreshMenu()};
+$('circs').onclick=e=>{const b=e.target.closest('.cc');if(!b)return;SFX.tap();const c=CIRCUITS.find(x=>x.id===b.dataset.c);if(STARS<c.star){speak(`${c.name} ! Il te faut ${c.star} étoiles. Tu en as ${STARS}.`);toast(`🔒 Encore ${c.star-STARS} ⭐ pour ${c.name}`);return}SET.circ=c.id;store.set('circ',SET.circ);speak(c.name+' !');refreshMenu()};
 function roarShow(){if(!player)return;player.fireT=1.3;SFX.roar()}
 const TIPS=['Astuce : 6 anneaux d’or, et hop, une question !','Chaque bonne réponse donne un turbo 🔥','Enchaîne les bonnes réponses pour un SUPER TURBO !','Gagne des étoiles ⭐ pour débloquer des dragons','Le premier toucher compte : réfléchis bien !'];
-async function ensureCircuit(){if(CIRCUIT&&CIRCUIT.id===SET.circ)return true;const c=CIRCUITS.find(x=>x.id===SET.circ)||CIRCUITS[0];
+async function ensureCircuit(){{const c0=CIRCUITS.find(x=>x.id===SET.circ);if(!c0||STARS<c0.star)SET.circ='iles'}if(CIRCUIT&&CIRCUIT.id===SET.circ)return true;const c=CIRCUITS.find(x=>x.id===SET.circ)||CIRCUITS[0];
   $('lIcon').textContent=c.emoji;$('lTitle').textContent=`En route pour ${c.name} !`;$('lTip').textContent=TIPS[Math.floor(R()*TIPS.length)];loadProg(0);$('loading').classList.remove('hide');speak(`En route pour ${c.name} !`);
   const t0=performance.now();try{await loadCircuit(c.id)}catch(err){console.error(err);$('lTitle').textContent='Oups, ce circuit ne charge pas. On vole sur les Îles !';SET.circ='iles';await new Promise(r=>setTimeout(r,1400));await loadCircuit('iles')}
   const wait=900-(performance.now()-t0);if(wait>0)await new Promise(r=>setTimeout(r,wait));$('loading').classList.add('hide');return true}
