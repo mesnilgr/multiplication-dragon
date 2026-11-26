@@ -630,8 +630,21 @@ const tilt={g:null,cal:null,last:0,sx:0,sy:0};const D2R=Math.PI/180;
 function onOri(e){if(e.beta==null||e.gamma==null)return;const b=e.beta*D2R,g=e.gamma*D2R;tilt.g=[Math.cos(b)*Math.sin(g),-Math.sin(b),-Math.cos(b)*Math.cos(g)];tilt.last=performance.now()}
 function calibrate(){if(tilt.g)tilt.cal={a:Math.atan2(tilt.g[0],-tilt.g[1]),p:Math.asin(clamp(-tilt.g[2],-1,1))}}
 const dzf=(v,d,m)=>Math.sign(v)*clamp((Math.abs(v)-d)/(m-d),0,1);
-function tiltInput(){if(!tilt.g)return{x:0,y:0};if(!tilt.cal)calibrate();const[dx,dy,dz]=tilt.g,proj=Math.hypot(dx,dy);let a=Math.atan2(dx,-dy)-tilt.cal.a;if(a>Math.PI)a-=Math.PI*2;if(a<-Math.PI)a+=Math.PI*2;const p=Math.asin(clamp(-dz,-1,1))-tilt.cal.p;
-  const tx=dzf(a,.06,.36)*clamp(proj/.3,0,1),ty=dzf(-p,.06,.32);tilt.sx=lerp(tilt.sx,tx,.3);tilt.sy=lerp(tilt.sy,ty,.3);return{x:tilt.sx,y:tilt.sy}}
+/* Sensibilité de l'inclinaison (réglable dans l'espace parents) — angles en radians */
+const SENSP={
+  easy:  {dz:.10,max:.30,pdz:.16,pmax:.42,pow:1.7,tau:.28,vx:10,vy:6,assist:.7,assistY:.85,drift:.1,slow:.14,mag:3.2},
+  normal:{dz:.07,max:.33,pdz:.10,pmax:.36,pow:1.35,tau:.18,vx:13,vy:8.5,assist:.3,assistY:.5,drift:.06,slow:.07,mag:2.8},
+  expert:{dz:.05,max:.36,pdz:.07,pmax:.32,pow:1.1,tau:.1,vx:14,vy:10,assist:.08,assistY:.15,drift:.03,slow:0,mag:2.4}};
+let SENS=store.get('sens','easy');if(!SENSP[SENS])SENS='easy';const SPf=()=>SENSP[SENS];
+const tcurve=(v,d,m,pw)=>Math.sign(v)*Math.pow(clamp((Math.abs(v)-d)/(m-d),0,1),pw);
+let tiltT=0;
+function tiltInput(){if(!tilt.g)return{x:0,y:0};if(!tilt.cal)calibrate();const sp=SPf(),nw=performance.now(),dt=Math.min(.1,(nw-(tiltT||nw))/1000);tiltT=nw;
+  const[dx,dy,dz]=tilt.g,proj=Math.hypot(dx,dy);const ar=Math.atan2(dx,-dy),pr=Math.asin(clamp(-dz,-1,1));
+  let a=ar-tilt.cal.a;if(a>Math.PI)a-=Math.PI*2;if(a<-Math.PI)a+=Math.PI*2;const p=pr-tilt.cal.p;
+  /* recentrage doux : le « neutre » suit lentement la façon dont l'enfant tient la tablette */
+  if(state==='race'){const k=dt*sp.drift;tilt.cal.a+=a*k;tilt.cal.p+=p*k}
+  const tx=tcurve(a,sp.dz,sp.max,sp.pow)*clamp(proj/.3,0,1),ty=tcurve(-p,sp.pdz,sp.pmax,sp.pow);const f=1-Math.exp(-dt/sp.tau);
+  tilt.sx+=(tx-tilt.sx)*f;tilt.sy+=(ty-tilt.sy)*f;return{x:tilt.sx,y:tilt.sy}}
 let oriOn=false;
 async function enableSensor(wait=900){if(oriOn&&performance.now()-tilt.last<1500)return true;try{if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function'){const st=await DeviceOrientationEvent.requestPermission();if(st!=='granted')return false}}catch(e){return false}
   if(!oriOn){addEventListener('deviceorientation',onOri);oriOn=true}await new Promise(r=>setTimeout(r,wait));return performance.now()-tilt.last<1500}
@@ -764,8 +777,12 @@ function onRing(r,ring){
   else{if(r.fate){r.kick=Math.min(r.kick+3.4,11);r.cnt++;if(r.cnt>=PER_Q){r.cnt=0;r.quizT=1.2+R()*5*(1.15-r.skill)}}}}
 function moveRacer(r,dt){
   const ring=rings[r.ri],ahead=r.lapBase+ring.s-r.dist;let tvx,tvy;
-  if(r.isP){const i=state==='race'?input():{x:0,y:0};tvx=i.x*14;tvy=i.y*10;const ex=ring.x-r.x,ey=ring.y-r.y;const manual=i.x||i.y;
+  if(r.isP){const i=state==='race'?input():{x:0,y:0};const sp=SPf(),tl=SET.ctrl==='tilt'&&!DBG.bot;tvx=i.x*(tl?sp.vx:14);tvy=i.y*(tl?sp.vy:10);const ex=ring.x-r.x,ey=ring.y-r.y;const manual=i.x||i.y;
     if(state==='quiz'||state==='done'){tvx=clamp(ex*2.6,-12,12);tvy=clamp(ey*2.6,-10,10)}
+    else if(tl){/* aide forte : on mélange la consigne de l'enfant avec le chemin vers l'anneau */
+      const near=ahead<45?1:ahead<80?.5:.15,ax=clamp(ex*sp.mag,-12,12),ay=clamp(ey*sp.mag,-10,10);
+      const wx=sp.assist*near*(manual&&Math.sign(i.x)!==Math.sign(ex)&&Math.abs(i.x)>.6?.5:1),wy=sp.assistY*near;
+      tvx=lerp(tvx,ax,wx);tvy=lerp(tvy,ay,wy);if(Math.abs(r.x)>6.5)tvx-=Math.sign(r.x)*(Math.abs(r.x)-6.5)*1.6;if(Math.abs(r.y)>5)tvy-=Math.sign(r.y)*(Math.abs(r.y)-5)*1.4}
     else if(!manual){if(ahead<40){tvx+=clamp(ex*.8,-2.6,2.6);tvy+=clamp(ey*.8,-2.2,2.2)}}
     else if(ahead<18&&Math.hypot(ex,ey)<7.5){tvx+=ex*2.4;tvy+=ey*2.4}
     r.vx+=(tvx-r.vx)*Math.min(1,dt*7);r.vy+=(tvy-r.vy)*Math.min(1,dt*7)}
@@ -778,7 +795,7 @@ function moveRacer(r,dt){
   if(!r.isP){const gap=r.dist-player.dist,late=player.dist>(LAPS-1)*L+L*.45;base*=1+clamp(-gap/420,-.13,late?.05:.15);
     if(r.quizT>0){r.quizT-=dt;if(r.quizT<=0){const x=R();const ti=x<r.skill*.6?0:x<r.skill?1:2;r.boostT=TIERS[ti].dur;r.boostMul=TIERS[ti].mul;r.fireT=ti===0?1:.5;r.kick=Math.min(r.kick+TIERS[ti].kick,12)}}}
   const go=state!=='count';
-  const tgt=go?base*(r.boostT>0?r.boostMul:1)+r.kick:0;
+  const tgt=go?base*(r.boostT>0?r.boostMul:1)*(r.isP&&SET.ctrl==='tilt'?1-SPf().slow*clamp(Math.abs(r.vx)/12,0,1):1)+r.kick:0;
   r.speed+=(tgt-r.speed)*Math.min(1,dt*(tgt>r.speed?2.4:1.1));r.kick*=Math.exp(-dt/1.8);r.boostT-=dt;r.fireT-=dt;
   r.dist+=r.speed*dt;
   while(r.dist>=r.lapBase+rings[r.ri].s){onRing(r,rings[r.ri]);r.ri++;if(r.ri>=rings.length){r.ri=0;r.lapBase+=L}}
@@ -901,6 +918,7 @@ function renderParents(){const ceil=CEIL[AGE],unl=unlocked().length;const st=stu
   <h3>Âge de l’enfant</h3><p>L’âge fixe le plafond des notions qui peuvent se débloquer.</p>
   <div class="row ages">${AGES.map(a=>`<button class="seg${a===AGE?' sel':''}" data-age="${a}">${a===11?'11 ans et +':a+' ans'}</button>`).join('')}</div>
   <p>Plafond actuel : <b>${['grande section','CP','CE1','CE2','CM1','CM2'][ceil]}</b>. Étape en cours : <b>${frontier().name}</b>.</p>
+  <h3>Pilotage en penchant</h3><p>Plus c’est facile, plus le dragon s’aide tout seul pour viser les anneaux, et plus il faut pencher franchement pour tourner.</p><div class="row">${[['easy','Facile'],['normal','Moyen'],['expert','Expert']].map(([k,n])=>`<button class="seg${SENS===k?' sel':''}" data-sens="${k}">${n}</button>`).join('')}</div>
   <h3>Tenue de la tablette</h3><p>Si la tablette est posée à plat ou trop penchée pendant la course, le jeu fait une petite pause et demande de la tenir droite, en face de l’enfant. Il repart tout seul. (Demande l’accès aux capteurs au premier « Jouer ». Sans capteur, rien ne change.)</p><div class="row"><button class="seg${POS.on?' sel':''}" data-pos="1">Vérifier la tenue</button><button class="seg${POS.on?'':' sel'}" data-pos="0">Ne pas vérifier</button></div>
   <h3>Ce qui coince</h3>${st.length?`<div class="stuck">${st.map(s=>`<b>${s}</b>`).join('')}</div>`:'<p>Rien pour l’instant.</p>'}
   <h3>Grille de progression</h3>
@@ -909,12 +927,13 @@ function renderParents(){const ceil=CEIL[AGE],unl=unlocked().length;const st=stu
   <div class="rbtns"><button class="btn main" data-x="1">Fermer</button><button class="btn" data-reset="1">Remettre à zéro</button></div>`;
   pc.onclick=e=>{const b=e.target.closest('button');if(!b)return;SFX.tap();
     if(b.dataset.x){$('parents').classList.add('hide');refreshMenu();return}
+    if(b.dataset.sens){SENS=b.dataset.sens;store.set('sens',SENS);renderParents();return}
     if(b.dataset.pos){POS.on=b.dataset.pos==='1';store.set('posture',POS.on);renderParents();return}
     if(b.dataset.age){AGE=+b.dataset.age;store.set('age',AGE);renderParents();return}
     if(b.dataset.reset){if(b.dataset.reset==='1'){b.dataset.reset='2';b.textContent='Sûr ? Toucher encore';return}PROG={};TO={};relearn=[];store.set('prog',PROG);store.set('to',TO);renderParents()}}}
 $('bParents').onclick=openGate;
 
-window.__race={get state(){return state},POS,tilt,postureTick,onOri,get player(){return player},get racers(){return racers},get Q(){return Q},answer,rings,L,get stats(){return stats},startRace,pickFact,record,unlocked,get PROG(){return PROG},CONCEPTS,setAge(a){AGE=a},renderParents,frNums};
+window.__race={get state(){return state},POS,tilt,tiltInput,get SENS(){return SENS},set SENS(v){SENS=v},setCtrl(c){SET.ctrl=c},postureTick,onOri,get player(){return player},get racers(){return racers},get Q(){return Q},answer,rings,L,get stats(){return stats},startRace,pickFact,record,unlocked,get PROG(){return PROG},CONCEPTS,setAge(a){AGE=a},renderParents,frNums};
 makeRacers();refreshMenu();requestAnimationFrame(loop);
 }
 </script>
