@@ -2,6 +2,12 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Dragons">
+<link rel="apple-touch-icon" href="icon-180.png">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Course des Dragons</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -69,6 +75,12 @@ button:focus-visible{outline:4px solid var(--sun);outline-offset:3px}
 .opt{height:clamp(84px,13vw,116px);border-radius:26px;background:var(--sun);font:700 clamp(40px,7vw,62px) Andika,Fredoka,sans-serif;color:#5a3a00;box-shadow:0 8px 0 #d39a12;animation:pop .35s cubic-bezier(.2,1.6,.4,1) backwards}
 .opt:nth-child(2){animation-delay:.05s}.opt:nth-child(3){animation-delay:.1s}.opt:nth-child(4){animation-delay:.15s}
 .opt:active{transform:translateY(6px);box-shadow:0 2px 0 #d39a12}
+.opt.stone{background:linear-gradient(145deg,#a9a4b4,#77718a);color:#4a4558;box-shadow:0 8px 0 #57516a,inset 0 0 0 4px rgba(255,255,255,.12);animation:shake .45s;pointer-events:none;filter:none;opacity:1}
+.opt.stone::after{content:'🪨';position:absolute;right:8px;top:4px;font-size:26px}
+.opt{position:relative}.opt:disabled{pointer-events:none}
+#qopts.wait .opt{visibility:hidden;animation:none}
+#qopts.dizzy{animation:wob 1s ease-in-out 2}
+@keyframes wob{25%{transform:rotate(-3deg) translateX(-10px)}75%{transform:rotate(3deg) translateX(10px)}}
 .opt.no{animation:shake .45s;opacity:.3;filter:grayscale(1);pointer-events:none}
 .opt.yes{background:#7dff9a;box-shadow:0 8px 0 #3ec463;color:#0d4d1f;transform:scale(1.08)}
 .opt.glow{animation:pulse .9s infinite;background:#7dff9a;box-shadow:0 8px 0 #3ec463;color:#0d4d1f}
@@ -106,6 +118,19 @@ button:focus-visible{outline:4px solid var(--sun);outline-offset:3px}
 #note{font:600 16px Andika,sans-serif;color:#7a6aa0;text-align:center;background:rgba(255,250,240,.85);border-radius:14px;padding:2px 12px}
 #note:empty{display:none}
 #bParents{position:fixed;right:14px;top:max(14px,env(safe-area-inset-top));z-index:9;padding:8px 16px;border-radius:18px;background:rgba(255,250,240,.9);font:600 17px Fredoka,sans-serif;color:var(--plum);box-shadow:0 3px 0 #d8c9a8}
+#rotate,#posture{position:fixed;inset:0;z-index:40;display:none;place-items:center;text-align:center;padding:24px;background:linear-gradient(160deg,#7b5cd6,#d86aa0);color:#fff;font:600 clamp(24px,4.5vw,36px)/1.25 Fredoka,sans-serif}
+#rotate .ic,#posture .ic{font-size:clamp(90px,18vw,150px);line-height:1;margin-bottom:14px;display:inline-block}
+#rotate .ic{animation:rot 2.2s ease-in-out infinite}
+@keyframes rot{0%,25%{transform:rotate(0)}55%,100%{transform:rotate(-90deg)}}
+#posture{background:rgba(43,35,80,.72)}
+#posture .pc{background:var(--paper);color:var(--plum);border-radius:40px;padding:22px 30px 26px;max-width:560px;box-shadow:0 10px 0 #e3d3b0,0 30px 70px rgba(40,20,80,.45);animation:pop .5s cubic-bezier(.2,1.5,.4,1)}
+#posture .ic{animation:lift 1.8s ease-in-out infinite;transform-origin:50% 90%}
+@keyframes lift{0%,30%{transform:perspective(400px) rotateX(70deg)}65%,100%{transform:perspective(400px) rotateX(0)}}
+#posture small{display:block;font:600 19px Andika,sans-serif;color:#7a6aa0;margin-top:8px}
+#posture .meter{height:14px;border-radius:8px;background:#efe6ff;margin:14px auto 0;max-width:320px;overflow:hidden}
+#posture .meter i{display:block;height:100%;width:0;background:#5bc27a;border-radius:8px;transition:width .15s}
+#posture button{margin-top:14px;font:600 17px Andika,sans-serif;color:#7a6aa0;background:none;text-decoration:underline}
+@media (orientation:portrait) and (pointer:coarse){#rotate{display:grid}}
 .ov{position:fixed;inset:0;z-index:10;display:grid;place-items:center;background:rgba(43,35,80,.38);padding:12px;overflow-y:auto}
 .rcard{background:var(--paper);border-radius:40px;padding:22px 26px 26px;width:min(600px,100%);text-align:center;box-shadow:0 10px 0 #e3d3b0,0 30px 70px rgba(40,20,80,.45);animation:pop .55s cubic-bezier(.2,1.5,.4,1);position:relative;overflow:hidden}
 .rays{position:absolute;left:50%;top:90px;width:700px;height:700px;margin:-350px 0 0 -350px;background:repeating-conic-gradient(rgba(255,201,60,.28) 0 12deg,transparent 12deg 24deg);animation:spin 14s linear infinite;pointer-events:none}
@@ -177,8 +202,6 @@ button:focus-visible{outline:4px solid var(--sun);outline-offset:3px}
     <div class="row"><span class="lbl">Ton dragon</span><div class="row" id="cols"></div></div>
     <div class="row"><span class="lbl">Son nom</span><div class="nm"><input id="dname" maxlength="12" autocomplete="off" spellcheck="false" aria-label="Nom du dragon"><div class="row" id="nsug"></div></div></div>
     <div class="row"><span class="lbl">En ce moment</span><span id="lvl"></span></div>
-    <div class="row"><span class="lbl">Pilotage</span><div class="row" id="ctrls"><button class="seg" data-c="touch">👆 Au doigt</button><button class="seg" data-c="tilt" id="cTilt">📱 En penchant</button></div></div>
-    <div class="row" id="voiceRow"><span class="lbl">Réponse</span><div class="row"><button class="seg" data-v="0">👆 Je touche</button><button class="seg" data-v="1">🎤 Je dis</button></div></div>
   </div>
   <div id="note"></div>
   <button id="play">C'est parti !</button>
@@ -187,6 +210,8 @@ button:focus-visible{outline:4px solid var(--sun);outline-offset:3px}
 <div id="end" class="ov hide"><div class="rcard"><div class="rays"></div><div class="ricon" id="eIcon">🏆</div><h2 id="eTitle">Bravo !</h2>
   <div class="rank" id="eRank"></div><div class="stats" id="eStats"></div><div class="newc" id="eNew"></div><div class="rev" id="eRev"></div>
   <div class="rbtns"><button class="btn main" id="again">Rejouer</button><button class="btn" id="toMenu">Menu</button></div></div></div>
+<div id="rotate"><div><div class="ic">📱</div><div>Tourne la tablette<br>pour jouer en grand !</div></div></div>
+<div id="posture"><div class="pc"><div class="ic">📱</div><div>Tiens la tablette bien droite,<br>en face de toi !</div><small>Le dragon t'attend. Ça repart tout seul.</small><div class="meter"><i id="pmeter"></i></div><button id="pskip">Jouer quand même</button></div></div>
 <div id="parents" class="ov hide"><div class="pcard" id="pcard"></div></div>
 
 <script type="module">
@@ -202,7 +227,7 @@ const hx=h=>[(h>>16&255)/255,(h>>8&255)/255,(h&255)/255];
 
 /* ---------- Réglages ---------- */
 const store={get(k,d){try{const v=localStorage.getItem('dragons.'+k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem('dragons.'+k,JSON.stringify(v))}catch(e){}}};
-const SET={color:store.get('color',0),ctrl:'touch',voice:false};
+const SET={color:store.get('color',0),ctrl:'touch',voice:false};/* réponses au toucher uniquement */
 const DRAG=[
   {name:'Pistache',main:0x5fae3a,belly:0xf2e3a0,acc:0xe86a9a,horn:0xfff1d6,css:'#6cc24a'},
   {name:'Braise',main:0xd8402a,belly:0xffc861,acc:0xff9a1f,horn:0x3a2a20,css:'#ff5a3c'},
@@ -328,6 +353,7 @@ const SFX={
   roar(){tone(140,.55,'sawtooth',.16,70);tone(147,.55,'square',.06,74);noise(.6,600,200,.15,.7)},
   good(){tone(880,.14,'sine',.3);tone(1320,.3,'sine',.3,0,.11)},
   bad(){tone(330,.25,'sine',.2,220)},
+cough(){tone(180,.12,'triangle',.18,120);setTimeout(()=>tone(160,.14,'triangle',.16,100),150)},
   beep(){tone(520,.2,'square',.12)},go(){tone(1040,.55,'square',.13);tone(1560,.55,'sine',.12)},
   lap(){[660,880,1100].forEach((f,i)=>tone(f,.4,'triangle',.2,0,i*.09))},
   fan(){[523,659,784,1047,784,1047,1319].forEach((f,i)=>tone(f,.38,'triangle',.22,0,i*.13))},
@@ -606,8 +632,28 @@ function calibrate(){if(tilt.g)tilt.cal={a:Math.atan2(tilt.g[0],-tilt.g[1]),p:Ma
 const dzf=(v,d,m)=>Math.sign(v)*clamp((Math.abs(v)-d)/(m-d),0,1);
 function tiltInput(){if(!tilt.g)return{x:0,y:0};if(!tilt.cal)calibrate();const[dx,dy,dz]=tilt.g,proj=Math.hypot(dx,dy);let a=Math.atan2(dx,-dy)-tilt.cal.a;if(a>Math.PI)a-=Math.PI*2;if(a<-Math.PI)a+=Math.PI*2;const p=Math.asin(clamp(-dz,-1,1))-tilt.cal.p;
   const tx=dzf(a,.06,.36)*clamp(proj/.3,0,1),ty=dzf(-p,.06,.32);tilt.sx=lerp(tilt.sx,tx,.3);tilt.sy=lerp(tilt.sy,ty,.3);return{x:tilt.sx,y:tilt.sy}}
-async function enableTilt(){try{if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function'){const st=await DeviceOrientationEvent.requestPermission();if(st!=='granted')return false}}catch(e){return false}
-  addEventListener('deviceorientation',onOri);await new Promise(r=>setTimeout(r,900));return performance.now()-tilt.last<1500}
+let oriOn=false;
+async function enableSensor(wait=900){if(oriOn&&performance.now()-tilt.last<1500)return true;try{if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function'){const st=await DeviceOrientationEvent.requestPermission();if(st!=='granted')return false}}catch(e){return false}
+  if(!oriOn){addEventListener('deviceorientation',onOri);oriOn=true}await new Promise(r=>setTimeout(r,wait));return performance.now()-tilt.last<1500}
+const enableTilt=()=>enableSensor();
+/* Tenue de la tablette : droite, face à l'enfant (tolérant, jamais punitif) */
+const POS={on:store.get('posture',true),bad:0,good:0,shown:false,skipUntil:0,from:'race'};
+function leanDeg(){if(!tilt.g||performance.now()-tilt.last>1500)return null;const[,,gz]=tilt.g;return Math.asin(clamp(-gz,-1,1))/D2R}// 0 = droite, 90 = à plat écran vers le haut, négatif = penchée vers le bas
+let posLast=0;function postureTick(){const nw=performance.now(),rdt=Math.min(.25,(nw-(posLast||nw))/1000);posLast=nw;const el=$('posture');if(!POS.on||DBG.bot){if(POS.shown)hidePosture();return}
+  const L=leanDeg();if(L==null){if(POS.shown)hidePosture();return}
+  const playing=state==='race'||state==='count'||state==='quiz';
+  if(!POS.shown){if(!playing||performance.now()<POS.skipUntil){POS.bad=0;return}
+    const bad=L>62||L<-35;POS.bad=bad?POS.bad+rdt:Math.max(0,POS.bad-rdt*2);
+    if(POS.bad>1.3){POS.shown=true;POS.from=state;POS.good=0;state='pause';el.style.display='grid';speak('Tiens la tablette bien droite, en face de toi !')}}
+  else{const ok=L<48&&L>-25;POS.good=ok?POS.good+rdt:Math.max(0,POS.good-rdt*1.5);$('pmeter').style.width=Math.min(100,POS.good/.8*100)+'%';
+    if(POS.good>.8){hidePosture();SFX.go&&SFX.go();toast('C\'est reparti ! 🐉')}}}
+function hidePosture(){$('posture').style.display='none';if(POS.shown){POS.shown=false;POS.bad=0;if(state==='pause'&&$('pause').classList.contains('hide')){state=POS.from;last=performance.now();if(SET.ctrl==='tilt')calibrate()}}}
+$('pskip').onclick=()=>{SFX.tap();POS.skipUntil=performance.now()+60000;hidePosture()};
+/* Paysage : en portrait sur tablette, la course se met en pause */
+const portraitMQ=matchMedia('(orientation:portrait) and (pointer:coarse)');
+function onOrient(){if(portraitMQ.matches&&(state==='race'||state==='quiz'||state==='count')){if(POS.shown)hidePosture();pausedFrom=state;state='pause';$('pause').classList.remove('hide')}}
+(portraitMQ.addEventListener?portraitMQ.addEventListener('change',onOrient):portraitMQ.addListener(onOrient));
+try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('landscape').catch(()=>{})}catch(e){}
 function input(){if(DBG.bot)return DBG.bot();let x=0,y=0;if(keys.ArrowLeft||keys.a||keys.q)x-=1;if(keys.ArrowRight||keys.d)x+=1;if(keys.ArrowUp||keys.w||keys.z)y+=1;if(keys.ArrowDown||keys.s)y-=1;
   if(SET.ctrl==='tilt'){const t=tiltInput();x+=t.x;y+=t.y}else{x+=stick.x;y+=stick.y}
   const l=Math.hypot(x,y);if(l>1){x/=l;y/=l}return{x:Math.abs(x)<.1?0:x,y:Math.abs(y)<.1?0:y}}
@@ -649,14 +695,22 @@ let Q=null,stats=[],qStreak=0,newConcepts=[];
 const TIERS=[{t:'SUPER TURBO !',mul:1.8,dur:3.4,kick:6},{t:'TURBO !',mul:1.6,dur:2.8,kick:4.5},{t:'Turbo !',mul:1.42,dur:2.2,kick:3}];
 function startQuiz(){const f=pickFact();let txt=f.txt,say=f.say;
   if(f.mul&&f.mul[0]!==f.mul[1]&&R()<.35){txt=`${f.mul[1]} × ${f.mul[0]} = ?`;say=`${f.mul[1]} fois ${f.mul[0]} ?`}
-  Q={f,ans:f.ans,t0:performance.now(),tries:0,done:false};state='quiz';autoTries=0;
+  Q={f,ans:f.ans,t0:performance.now(),tries:0,done:false,shown:false,taps:[]};state='quiz';autoTries=0;
   const qq=$('qq');qq.innerHTML=txt.replace('?','<span id="qr">?</span>');qq.classList.toggle('long',txt.length>13);
   $('qlab').textContent=f.lab||f.c.name;$('qfl').textContent=qStreak>=1?`Série ${'🔥'.repeat(Math.min(3,qStreak))}`:'';
   const dEl=$('qdots');if(f.dots){dEl.innerHTML=f.dots.map(n=>'<span>'+'<i></i>'.repeat(n)+'</span>').join(f.dots.length>1?'+':'');dEl.classList.remove('hide')}else dEl.classList.add('hide');
-  $('qhear').textContent=voiceAvail()?(dictNS?'Appuie sur 🎤 et dis la réponse':'Dis la réponse… ou touche-la'):'';
-  const o=$('qopts');o.innerHTML='';for(const v of options(f)){const bt=document.createElement('button');bt.className='opt';bt.textContent=fm(v);bt.dataset.v=v;bt.onpointerdown=e=>{e.preventDefault();answer(v,bt)};o.appendChild(bt)}
+  const o=$('qopts');o.innerHTML='';o.className='wait';for(const v of options(f)){const bt=document.createElement('button');bt.className='opt';bt.textContent=fm(v);bt.dataset.v=v;bt.onpointerdown=e=>{e.preventDefault();e.stopPropagation();if(tapSpam())return;answer(v,bt)};o.appendChild(bt)}
   $('qmicrow').classList.toggle('hide',!(SET.voice&&voiceAvail()));$('qcard').classList.remove('out');$('quiz').classList.remove('hide');stick.id=null;stick.x=stick.y=0;stEl.classList.add('hide');
-  SFX.q();speak(say,()=>{if(Q&&!Q.done&&SET.voice&&NSR&&!dictNS)listen(false)},1.02)}
+  const q0=Q;SFX.q();speak(say,()=>revealOpts(q0,500),1.02);setTimeout(()=>revealOpts(q0,0),3200)}
+function revealOpts(q,delay){setTimeout(()=>{if(Q!==q||q.done||q.shown)return;if(performance.now()<dizzyUntil){revealOpts(q,dizzyUntil-performance.now()+200);return}q.shown=true;q.t0=performance.now();$('qopts').className=''},delay)}
+let dizzyUntil=0;
+function tapSpam(){if(!Q||Q.done)return true;const now=performance.now();Q.taps=Q.taps.filter(t=>now-t<700);Q.taps.push(now);
+  if(now<dizzyUntil)return true;
+  if(!Q.shown){if(Q.taps.length>=3)dizzy();return true}
+  if(Q.taps.length>=3){dizzy();return true}return false}
+function dizzy(){dizzyUntil=performance.now()+2000;if(player)player.dizzyUntil=dizzyUntil;Q&&(Q.taps=[]);const o=$('qopts');o.className='wait dizzy';$('qhear').textContent='😵‍💫 Oh là là, ton dragon a le tournis ! Écoute bien la question…';$('qmicrow').classList.remove('hide');$('mic').classList.add('hide');SFX.bad();speak('Oh là là ! Ton dragon a le tournis !');
+  setTimeout(()=>{if(Q&&!Q.done&&Q.shown)o.className=''},2000);setTimeout(()=>{if(performance.now()>=dizzyUntil){$('qmicrow').classList.add('hide');$('mic').classList.remove('hide')}},2100)}
+$('quiz').addEventListener('pointerdown',e=>{if(!e.target.closest('.opt'))tapSpam()});
 function answer(v,btn){if(!Q||Q.done)return;const sec=(performance.now()-Q.t0)/1000;
   if(!btn)btn=[...$('qopts').children].find(b=>+b.dataset.v===v);
   const before=unlocked().length;
@@ -664,9 +718,9 @@ function answer(v,btn){if(!Q||Q.done)return;const sec=(performance.now()-Q.t0)/1
     const first=Q.tries===0;record(Q.f,first,sec);stats.push({s:Q.f.s,sec,ok:first});
     let ti;if(first){qStreak++;ti=qStreak>=3?0:qStreak===2?1:2}else{qStreak=0;ti=2}
     SFX.good();speak(first&&qStreak>=3?`${fm(Q.ans)} ! Super série !`:`${fm(Q.ans)} !`);setTimeout(()=>endQuiz(TIERS[ti]),380)}
-  else{Q.tries++;SFX.bad();btn&&btn.classList.add('no');
-    if(Q.tries>=2){Q.done=true;stopListen();record(Q.f,false,sec);stats.push({s:Q.f.s,sec,ok:false});qStreak=0;const good=[...$('qopts').children].find(b=>+b.dataset.v===Q.ans);good&&good.classList.add('glow');const qr=$('qr');qr.textContent=fm(Q.ans);qr.className='ok';
-      speak(`${Q.f.say.replace(' ?','')}, ${fm(Q.ans)}. On continue !`);setTimeout(()=>endQuiz(null),2300)}
+  else{Q.tries++;SFX.bad();btn&&btn.classList.add('stone');[...$('qopts').children].forEach(b=>b.disabled=true);if(player)player.coughUntil=performance.now()+1100;setTimeout(()=>SFX.cough&&SFX.cough(),120);
+    if(Q.tries>=1){Q.done=true;stopListen();record(Q.f,false,sec);stats.push({s:Q.f.s,sec,ok:false});qStreak=0;const good=[...$('qopts').children].find(b=>+b.dataset.v===Q.ans);good&&good.classList.add('glow');const qr=$('qr');qr.textContent=fm(Q.ans);qr.className='ok';
+      speak(`Oups ! ${Q.f.say.replace(' ?','')}, ${fm(Q.ans)}. On continue !`);setTimeout(()=>endQuiz(null),2600)}
     else{$('qhear').textContent=voiceAvail()&&SET.voice?'Presque ! Essaie encore':'';speak('Presque ! Essaie encore.')}}
   const after=unlocked();if(after.length>before){const c=after[after.length-1];newConcepts.push(c.name);setTimeout(()=>{toast(`🎉 Nouveau : ${c.name} !`);SFX.unlock();speak(`Bravo ! Nouvelle étape : ${c.name} !`)},1400)}}
 function endQuiz(tier){$('qcard').classList.add('out');setTimeout(()=>{if(!Q||Q.done)$('quiz').classList.add('hide')},340);
@@ -734,7 +788,7 @@ function moveRacer(r,dt){
 function poseRacer(r,dt){const m=r.mesh;worldAt(r.dist,r.x,r.y,m.position);
   const sp=Math.max(8,r.speed);const yaw=clamp(r.vx/sp,-.5,.5),pit=clamp(r.vy/sp,-.5,.5);
   tv.copy(F.T).addScaledVector(F.R,yaw).addScaledVector(F.U,pit).add(m.position);m.up.copy(F.U);m.lookAt(tv);
-  r.roll=lerp(r.roll,clamp(-r.vx*.07,-.8,.8),Math.min(1,dt*6));m.rotateZ(-r.roll);
+  r.roll=lerp(r.roll,clamp(-r.vx*.07,-.8,.8),Math.min(1,dt*6));m.rotateZ(-r.roll);if(r.dizzyUntil){const dl=r.dizzyUntil-performance.now();if(dl>0)m.rotateZ(Math.sin(dl/2000*Math.PI)*Math.sin(dl*.012)*.9)}
   m.visible=r.isP||state!=='menu';const boosting=r.boostT>0;r.t+=dt;
   const climb=clamp(r.vy/6,-1,1);const rate=(4.2+r.speed*.07)*(boosting?1.5:1)*(1+Math.max(0,climb)*.4);r.flap+=dt*rate*(r.fireT>0?1.8:1);
   const glide=r.fireT<=0&&((!boosting&&Math.sin(r.flap*.11+r.ph)>.7)||climb<-.6);
@@ -744,6 +798,7 @@ function poseRacer(r,dt){const m=r.mesh;worldAt(r.dist,r.x,r.y,m.position);
   m.position.addScaledVector(F.U,glide?0:-Math.sin(r.flap)*.15);
   if(r.label){r.label.position.copy(m.position).addScaledVector(F.U,3.4);const d=r.label.position.distanceTo(camera.position);r.label.visible=d<170&&state!=='menu';const k=clamp(d/40,.6,1.6);r.label.scale.set(6*k,1.7*k,1)}
   if(dt>0){
+    if(r.coughUntil>performance.now()&&R()<.5){tv.set(0,.55,3.3*.8);m.localToWorld(tv);tv2.copy(F.T).multiplyScalar(r.speed+4).addScaledVector(F.U,2+R()*2).addScaledVector(F.R,(R()-.5)*3);emit(tv,tv2,.7+R()*.4,1.4+R()*1.8,[0x8a8494,0x6f6a7a,0xb3aebd][Math.floor(R()*3)],2.5)}
     if(r.fireT>0){tv.set(0,.55,3.3*.8);m.localToWorld(tv);for(let k=0;k<3;k++){tv2.copy(F.T).multiplyScalar(r.speed+14+R()*8).addScaledVector(F.R,(R()-.5)*4).addScaledVector(F.U,(R()-.5)*4);emit(tv,tv2,.35+R()*.25,1.6+R()*1.6,[0xffe27a,0xff9a2e,0xff5a1f][Math.floor(R()*3)],3.5)}}
     if(boosting&&state!=='menu'){tv.set(0,.1,-6.1*.8);m.localToWorld(tv);for(let k=0;k<2;k++){tv2.set((R()-.5)*2,(R()-.5)*2,(R()-.5)*2).addScaledVector(F.T,r.speed*.55);emit(tv,tv2,.4+R()*.25,1+R()*.8,[0xffd23d,0xff8a1f,0xffffff][Math.floor(R()*3)],2)}}}}
 function finish(){state='done';endT=0;SFX.fan();const place=1+racers.filter(r=>!r.isP&&r.finishT&&r.finishT<player.finishT).length;
@@ -789,7 +844,7 @@ function updRings(){const vis=state!=='menu',A=pBB.A;let g=0;
     if(vis&&k<8&&s>0&&g<RG){const col=c===C_MAGIC?hx(0xff7fd0):hx(0xffe58a);for(let j=0;j<4&&g<RG;j++,g++){const a=simT*1.6+j*1.5708+i;tv.set(Math.cos(a)*4.4,Math.sin(a)*4.4,0).applyQuaternion(r.q).add(r.pos);const o=PMAX+g;A.pos[o*3]=tv.x;A.pos[o*3+1]=tv.y;A.pos[o*3+2]=tv.z;A.size[o]=(k===0?3.2:2.2)*s;A.alpha[o]=.9;A.col.set(col,o*3)}}}
   for(;g<RG;g++)pBB.A.alpha[PMAX+g]=0;
   ringMesh.instanceMatrix.needsUpdate=true;ringMesh.instanceColor.needsUpdate=true}
-function loop(now){requestAnimationFrame(loop);let rdt=Math.min(.05,(now-last)/1000);last=now;if(state==='pause'){renderer.render(scene,camera);return}
+function loop(now){requestAnimationFrame(loop);let rdt=Math.min(.05,(now-last)/1000);last=now;postureTick();if(state==='pause'){renderer.render(scene,camera);return}
   fpsAcc+=rdt;fpsN++;if(fpsAcc>2.5){const ft=fpsAcc/fpsN;window.__ft=ft;if(ft>.026&&PR>1&&!DBG.bot){PR=Math.max(1,PR-.15);renderer.setPixelRatio(PR);resize()}fpsAcc=0;fpsN=0}
   rdt*=DBG.speed;simT+=rdt;
   timeScale=lerp(timeScale,state==='quiz'?.22:1,Math.min(1,rdt*(state==='quiz'?10:3)));const dt=rdt*timeScale;
@@ -813,9 +868,6 @@ function loop(now){requestAnimationFrame(loop);let rdt=Math.min(.05,(now-last)/1
 function refreshMenu(){
   $('cols').innerHTML=DRAG.map((d,i)=>`<button class="col${i===SET.color?' sel':''}" data-i="${i}" style="background:${d.css}" aria-label="${d.name}"></button>`).join('');
   const fr=frontier();$('lvl').innerHTML=`<b>${fr.name}</b> · ${LV[fr.lv]}`;
-  document.querySelectorAll('#ctrls .seg').forEach(b=>b.classList.toggle('sel',b.dataset.c===SET.ctrl));
-  $('cTilt').classList.toggle('hide',typeof DeviceOrientationEvent==='undefined');
-  $('voiceRow').classList.toggle('hide',!voiceAvail());document.querySelectorAll('#voiceRow .seg').forEach(b=>b.classList.toggle('sel',+b.dataset.v===+SET.voice));
   const best=store.get('best',9);if(!$('note').dataset.msg)$('note').textContent=best<9?`Ton record : ${['🏆 1er','🥈 2e','🥉 3e','🏅 4e'][best-1]}`:''}
 $('cols').onclick=e=>{const b=e.target.closest('.col');if(!b)return;SFX.tap();SET.color=+b.dataset.i;store.set('color',SET.color);refreshMenu();makeRacers();speak(`Voici ${SET.name} !`);setTimeout(roarShow,250)};
 function roarShow(){if(!player)return;player.fireT=1.3;SFX.roar()}
@@ -825,13 +877,7 @@ $('nsug').onclick=e=>{const b=e.target.closest('.sug');if(!b)return;SFX.tap();if
 $('dname').addEventListener('change',()=>{setName($('dname').value);speak(SET.name+' !');roarShow()});
 $('dname').addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter')$('dname').blur()});
 setName(SET.name);sugg();
-$('ctrls').onclick=async e=>{const b=e.target.closest('.seg');if(!b)return;SFX.tap();const c=b.dataset.c;const note=$('note');
-  if(c==='tilt'){note.dataset.msg='1';note.textContent='Je regarde si l\'inclinaison marche…';const ok=await enableTilt();if(ok){SET.ctrl='tilt';note.textContent='📱 Inclinaison prête ! Tiens l\'iPad comme un volant.';speak('Tiens l\'iPad comme un volant.')}else{SET.ctrl='touch';note.textContent='L\'inclinaison ne marche pas ici. On joue au doigt 👆'}}
-  else{SET.ctrl='touch';delete note.dataset.msg}refreshMenu()};
-$('voiceRow').onclick=e=>{const b=e.target.closest('.seg');if(!b)return;SFX.tap();SET.voice=b.dataset.v==='1';
-  if(SET.voice&&NSR&&!dictNS){try{const t=new NSR();t.lang='fr-FR';t.onerror=ev=>{if(ev.error==='not-allowed'||ev.error==='service-not-allowed'){voiceBlocked=true;SET.voice=false;$('note').dataset.msg='1';$('note').textContent='Le micro n\'est pas autorisé ici. On touche les réponses 👆';refreshMenu()}};t.onstart=()=>setTimeout(()=>{try{t.abort()}catch(_){}},400);t.start()}catch(_){}}
-  refreshMenu()};
-$('play').onclick=()=>{SFX.tap();try{if(window.speechSynthesis){pickVoice();const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u)}}catch(e){}startRace()};
+$('play').onclick=async()=>{SFX.tap();if(playBusy)return;playBusy=true;const sp=typeof DeviceOrientationEvent!=='undefined'?enableSensor(700).catch(()=>false):Promise.resolve(false);try{if(window.speechSynthesis){pickVoice();const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u)}}catch(e){}SET.ctrl=(await sp)?'tilt':'touch';playBusy=false;startRace()};let playBusy=false;
 let pausedFrom='race';
 $('bPause').onclick=()=>{SFX.tap();if(state==='race'||state==='count'||state==='quiz'){pausedFrom=state;state='pause';$('pause').classList.remove('hide')}};
 $('resume').onclick=()=>{SFX.tap();$('pause').classList.add('hide');state=pausedFrom;last=performance.now()};
@@ -855,6 +901,7 @@ function renderParents(){const ceil=CEIL[AGE],unl=unlocked().length;const st=stu
   <h3>Âge de l’enfant</h3><p>L’âge fixe le plafond des notions qui peuvent se débloquer.</p>
   <div class="row ages">${AGES.map(a=>`<button class="seg${a===AGE?' sel':''}" data-age="${a}">${a===11?'11 ans et +':a+' ans'}</button>`).join('')}</div>
   <p>Plafond actuel : <b>${['grande section','CP','CE1','CE2','CM1','CM2'][ceil]}</b>. Étape en cours : <b>${frontier().name}</b>.</p>
+  <h3>Tenue de la tablette</h3><p>Si la tablette est posée à plat ou trop penchée pendant la course, le jeu fait une petite pause et demande de la tenir droite, en face de l’enfant. Il repart tout seul. (Demande l’accès aux capteurs au premier « Jouer ». Sans capteur, rien ne change.)</p><div class="row"><button class="seg${POS.on?' sel':''}" data-pos="1">Vérifier la tenue</button><button class="seg${POS.on?'':' sel'}" data-pos="0">Ne pas vérifier</button></div>
   <h3>Ce qui coince</h3>${st.length?`<div class="stuck">${st.map(s=>`<b>${s}</b>`).join('')}</div>`:'<p>Rien pour l’instant.</p>'}
   <h3>Grille de progression</h3>
   <div class="legend"><span><i class="sw k4"></i>maîtrisé (juste 3 fois, sur 2 jours)</span><span><i class="sw k3"></i>connu (juste en moins de 3 s)</span><span><i class="sw k2"></i>calculé (juste, plus lent)</span><span><i class="sw k1"></i>à revoir</span><span><i class="sw k0"></i>pas encore vu</span></div>
@@ -862,11 +909,12 @@ function renderParents(){const ceil=CEIL[AGE],unl=unlocked().length;const st=stu
   <div class="rbtns"><button class="btn main" data-x="1">Fermer</button><button class="btn" data-reset="1">Remettre à zéro</button></div>`;
   pc.onclick=e=>{const b=e.target.closest('button');if(!b)return;SFX.tap();
     if(b.dataset.x){$('parents').classList.add('hide');refreshMenu();return}
+    if(b.dataset.pos){POS.on=b.dataset.pos==='1';store.set('posture',POS.on);renderParents();return}
     if(b.dataset.age){AGE=+b.dataset.age;store.set('age',AGE);renderParents();return}
     if(b.dataset.reset){if(b.dataset.reset==='1'){b.dataset.reset='2';b.textContent='Sûr ? Toucher encore';return}PROG={};TO={};relearn=[];store.set('prog',PROG);store.set('to',TO);renderParents()}}}
 $('bParents').onclick=openGate;
 
-window.__race={get state(){return state},get player(){return player},get racers(){return racers},get Q(){return Q},answer,rings,L,get stats(){return stats},startRace,pickFact,record,unlocked,get PROG(){return PROG},CONCEPTS,setAge(a){AGE=a},renderParents,frNums};
+window.__race={get state(){return state},POS,tilt,postureTick,onOri,get player(){return player},get racers(){return racers},get Q(){return Q},answer,rings,L,get stats(){return stats},startRace,pickFact,record,unlocked,get PROG(){return PROG},CONCEPTS,setAge(a){AGE=a},renderParents,frNums};
 makeRacers();refreshMenu();requestAnimationFrame(loop);
 }
 </script>
