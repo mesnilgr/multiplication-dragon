@@ -72,6 +72,20 @@ button:focus-visible{outline:4px solid var(--sun);outline-offset:3px}
 .dots span{display:flex;flex-wrap:wrap;gap:5px;max-width:150px;justify-content:center}
 .dots i{width:24px;height:24px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff3b0,#ffb703 60%,#d97706);box-shadow:0 2px 0 rgba(0,0,0,.15)}
 #qopts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+#qopts.two{grid-template-columns:repeat(2,minmax(0,1fr));max-width:440px;margin:0 auto}
+#qopts:empty{display:none}
+#qpad{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px}
+#qpad.wait{visibility:hidden}
+#qpad.no{animation:shake .45s}
+.key{height:clamp(58px,9vh,74px);border-radius:20px;background:#fff3c4;font:700 clamp(30px,4.6vw,42px) Andika,Fredoka,sans-serif;color:#5a3a00;box-shadow:0 6px 0 #e8c64a}
+.key:active{transform:translateY(5px);box-shadow:0 1px 0 #e8c64a}
+.key.ok{background:#7dd87d;color:#fff;box-shadow:0 6px 0 #3ea44a}
+.key.del{background:#efe6ff;color:var(--plum);box-shadow:0 6px 0 #d3c3e8}
+.key:disabled{opacity:.45}
+#qmsg{font:700 22px Fredoka,sans-serif;color:var(--plum);min-height:0;transition:min-height .2s}
+#qmsg:not(:empty){min-height:32px;margin:-4px 0 8px}
+#qr.typing{color:var(--ink);border-bottom:5px solid var(--pink);min-width:1.4em}
+#qr.typing:empty::after{content:'\2007';}
 .opt{height:clamp(84px,13vw,116px);border-radius:26px;background:var(--sun);font:700 clamp(40px,7vw,62px) Andika,Fredoka,sans-serif;color:#5a3a00;box-shadow:0 8px 0 #d39a12;animation:pop .35s cubic-bezier(.2,1.6,.4,1) backwards}
 .opt:nth-child(2){animation-delay:.05s}.opt:nth-child(3){animation-delay:.1s}.opt:nth-child(4){animation-delay:.15s}
 .opt:active{transform:translateY(6px);box-shadow:0 2px 0 #d39a12}
@@ -216,7 +230,7 @@ button:focus-visible{outline:4px solid var(--sun);outline-offset:3px}
     <div class="qtop"><span id="qlab">Table de 7</span><span id="qfl"></span></div>
     <div class="qq" id="qq"></div>
     <div class="dots hide" id="qdots"></div>
-    <div id="qopts"></div>
+    <div id="qpad" class="hide"></div><div id="qmsg"></div><div id="qopts"></div>
     <div class="qmic hide" id="qmicrow"><button id="mic" aria-label="Dire la réponse">🎤</button><span id="qhear">Appuie et dis la réponse</span></div>
   </div>
 </div>
@@ -766,36 +780,58 @@ function options(f){const a=f.ans,set=new Set([a]);let near,far;
   else{near=[a+1,a-1,a+2,a-2];far=a>=10?[a+10,a-10,a+3]:[a+3,a-3]}
   for(let c of[...shuffle(near),...shuffle(far)]){c=r3(c);if(c>=0&&!set.has(c)&&set.size<4)set.add(c)}return shuffle([...set])}
 let Q=null,stats=[],qStreak=0,newConcepts=[];
-const TIERS=[{t:'SUPER TURBO !',mul:1.8,dur:3.4,kick:6},{t:'TURBO !',mul:1.6,dur:2.8,kick:4.5},{t:'Turbo !',mul:1.42,dur:2.2,kick:3}];
+const TIERS=[{t:'SUPER TURBO !',mul:1.8,dur:3.4,kick:6},{t:'TURBO !',mul:1.6,dur:2.8,kick:4.5},{t:'Turbo !',mul:1.42,dur:2.2,kick:3}];const TIER_SMALL={t:'Bien joué !',mul:1.2,dur:1.6,kick:2};
 function startQuiz(){const f=pickFact();let txt=f.txt,say=f.say;
   if(f.mul&&f.mul[0]!==f.mul[1]&&R()<.35){txt=`${f.mul[1]} × ${f.mul[0]} = ?`;say=`${f.mul[1]} fois ${f.mul[0]} ?`}
   Q={f,ans:f.ans,t0:performance.now(),tries:0,done:false,shown:false,taps:[]};state='quiz';autoTries=0;
   const qq=$('qq');qq.innerHTML=txt.replace('?','<span id="qr">?</span>');qq.classList.toggle('long',txt.length>13);
   $('qlab').textContent=f.lab||f.c.name;$('qfl').textContent=qStreak>=1?`Série ${'🔥'.repeat(Math.min(3,qStreak))}`:'';
   const dEl=$('qdots');if(f.dots){dEl.innerHTML=f.dots.map(n=>'<span>'+'<i></i>'.repeat(n)+'</span>').join(f.dots.length>1?'+':'');dEl.classList.remove('hide')}else dEl.classList.add('hide');
-  const o=$('qopts');o.innerHTML='';o.className='wait';for(const v of options(f)){const bt=document.createElement('button');bt.className='opt';bt.textContent=fm(v);bt.dataset.v=v;bt.onpointerdown=e=>{e.preventDefault();e.stopPropagation();if(tapSpam())return;answer(v,bt)};o.appendChild(bt)}
-  $('qmicrow').classList.toggle('hide',!(SET.voice&&voiceAvail()));$('qcard').classList.remove('out');$('quiz').classList.remove('hide');stick.id=null;stick.x=stick.y=0;stEl.classList.add('hide');
+  Q.stage='pad';Q.miss=0;Q.input='';Q.tFirst=null;Q.used=new Set();Q.dec=!Number.isInteger(f.ans);
+  $('qmsg').textContent='';$('qopts').innerHTML='';buildPad();$('qpad').className='wait';
+  $('qmicrow').classList.add('hide');$('qcard').classList.remove('out');$('quiz').classList.remove('hide');stick.id=null;stick.x=stick.y=0;stEl.classList.add('hide');
   const q0=Q;SFX.q();speak(say,()=>revealOpts(q0,500),1.02);setTimeout(()=>revealOpts(q0,0),3200)}
-function revealOpts(q,delay){setTimeout(()=>{if(Q!==q||q.done||q.shown)return;if(performance.now()<dizzyUntil){revealOpts(q,dizzyUntil-performance.now()+200);return}q.shown=true;q.t0=performance.now();$('qopts').className=''},delay)}
+/* Étapes : 1) clavier  2) QCM à 4 choix (après 1 raté)  3) QCM à 2 choix (après 2 ratés)  4) réponse montrée (après 4 ratés) */
+function buildPad(){const k=['1','2','3','4','5','6','⌫','7','8','9','0',Q.dec?',':'','✓'].filter(x=>x!=='');const pad=$('qpad');
+  pad.style.gridTemplateColumns=`repeat(${Math.ceil(k.length/2)},minmax(0,1fr))`;
+  pad.innerHTML=k.map(x=>`<button class="key${x==='✓'?' ok':x==='⌫'?' del':''}" data-k="${x}">${x}</button>`).join('');setQr()}
+function setQr(){const qr=$('qr');if(!qr||!Q)return;if(Q.stage==='pad'){qr.className='typing';qr.textContent=Q.input}else{qr.className='';qr.textContent='?'}
+  const okb=$('qpad').querySelector('.ok');if(okb)okb.disabled=!Q.input}
+function padKey(k){if(!Q||Q.done||Q.stage!=='pad'||!Q.shown||Q.busy)return;
+  if(k==='⌫'){Q.input=Q.input.slice(0,-1);SFX.tap()}
+  else if(k==='✓'){if(Q.input)answer(+Q.input.replace(',','.'),null);return}
+  else if(k===','){if(!Q.input.includes(',')&&Q.input.length<6){Q.input=(Q.input||'0')+',';SFX.tap()}}
+  else if(Q.input.length<6){Q.input=(Q.input==='0'?'':Q.input)+k;SFX.tap()}
+  setQr()}
+$('qpad').addEventListener('pointerdown',e=>{const b=e.target.closest('.key');if(!b)return;e.preventDefault();e.stopPropagation();padKey(b.dataset.k)});
+addEventListener('keydown',e=>{if(state!=='quiz'||!Q)return;if(/^[0-9]$/.test(e.key))padKey(e.key);else if(e.key==='Backspace')padKey('⌫');else if(e.key===','||e.key==='.')padKey(',');else if(e.key==='Enter')padKey('✓')});
+function showChoices(n){const o=$('qopts');const st=Q.dec?.1:1,all=[...new Set([...options(Q.f),...[1,2,3,4,5,10].flatMap(d=>[r3(Q.ans+d*st),r3(Q.ans-d*st)])])].filter(v=>v!==Q.ans&&v>=0&&!Q.used.has(v));const pick=shuffle([Q.ans,...all.slice(0,n-1)]);
+  o.className=n===2?'two':'';o.innerHTML='';for(const v of pick){const bt=document.createElement('button');bt.className='opt';bt.textContent=fm(v);bt.dataset.v=v;bt.onpointerdown=e=>{e.preventDefault();e.stopPropagation();if(tapSpam())return;answer(v,bt)};o.appendChild(bt)}}
+function revealOpts(q,delay){setTimeout(()=>{if(Q!==q||q.done||q.shown)return;if(performance.now()<dizzyUntil){revealOpts(q,dizzyUntil-performance.now()+200);return}q.shown=true;q.t0=performance.now();$('qpad').className='';setQr()},delay)}
 let dizzyUntil=0;
 function tapSpam(){if(!Q||Q.done)return true;const now=performance.now();Q.taps=Q.taps.filter(t=>now-t<700);Q.taps.push(now);
   if(now<dizzyUntil)return true;
   if(!Q.shown){if(Q.taps.length>=3)dizzy();return true}
   if(Q.taps.length>=3){dizzy();return true}return false}
-function dizzy(){dizzyUntil=performance.now()+2000;if(player)player.dizzyUntil=dizzyUntil;Q&&(Q.taps=[]);const o=$('qopts');o.className='wait dizzy';$('qhear').textContent='😵‍💫 Oh là là, ton dragon a le tournis ! Écoute bien la question…';$('qmicrow').classList.remove('hide');$('mic').classList.add('hide');SFX.bad();speak('Oh là là ! Ton dragon a le tournis !');
-  setTimeout(()=>{if(Q&&!Q.done&&Q.shown)o.className=''},2000);setTimeout(()=>{if(performance.now()>=dizzyUntil){$('qmicrow').classList.add('hide');$('mic').classList.remove('hide')}},2100)}
-$('quiz').addEventListener('pointerdown',e=>{if(!e.target.closest('.opt'))tapSpam()});
-function answer(v,btn){if(!Q||Q.done)return;const sec=(performance.now()-Q.t0)/1000;
-  if(!btn)btn=[...$('qopts').children].find(b=>+b.dataset.v===v);
+function dizzy(){dizzyUntil=performance.now()+2000;if(player)player.dizzyUntil=dizzyUntil;Q&&(Q.taps=[]);const o=$('qopts');o.classList.add('dizzy');$('qmsg').textContent='😵‍💫 Oh là là, ton dragon a le tournis ! Écoute bien…';SFX.bad();speak('Oh là là ! Ton dragon a le tournis !');
+  [...o.children].forEach(b=>b.disabled=true);setTimeout(()=>{o.classList.remove('dizzy');if(Q&&!Q.done&&!Q.busy){[...o.children].forEach(b=>{if(!b.classList.contains('stone'))b.disabled=false});$('qmsg').textContent=''}},2000)}
+$('quiz').addEventListener('pointerdown',e=>{if(!e.target.closest('.opt')&&!e.target.closest('#qpad'))tapSpam()});
+function answer(v,btn){if(!Q||Q.done||Q.busy)return;v=r3(v);const sec=(performance.now()-Q.t0)/1000;if(Q.tFirst==null)Q.tFirst=sec;
+  if(!btn&&Q.stage!=='pad')btn=[...$('qopts').children].find(b=>+b.dataset.v===v);
   const before=unlocked().length;
-  if(v===Q.ans){Q.done=true;stopListen();btn&&btn.classList.add('yes');const qr=$('qr');qr.textContent=fm(Q.ans);qr.className='ok';
-    const first=Q.tries===0;record(Q.f,first,sec);stats.push({s:Q.f.s,sec,ok:first});
-    let ti;if(first){qStreak++;ti=qStreak>=3?0:qStreak===2?1:2}else{qStreak=0;ti=2}
-    SFX.good();speak(first&&qStreak>=3?`${fm(Q.ans)} ! Super série !`:`${fm(Q.ans)} !`);setTimeout(()=>endQuiz(TIERS[ti]),380)}
-  else{Q.tries++;SFX.bad();btn&&btn.classList.add('stone');[...$('qopts').children].forEach(b=>b.disabled=true);if(player)player.coughUntil=performance.now()+1100;setTimeout(()=>SFX.cough&&SFX.cough(),120);
-    if(Q.tries>=1){Q.done=true;stopListen();record(Q.f,false,sec);stats.push({s:Q.f.s,sec,ok:false});qStreak=0;const good=[...$('qopts').children].find(b=>+b.dataset.v===Q.ans);good&&good.classList.add('glow');const qr=$('qr');qr.textContent=fm(Q.ans);qr.className='ok';
-      speak(`Oups ! ${Q.f.say.replace(' ?','')}, ${fm(Q.ans)}. On continue !`);setTimeout(()=>endQuiz(null),2600)}
-    else{$('qhear').textContent=voiceAvail()&&SET.voice?'Presque ! Essaie encore':'';speak('Presque ! Essaie encore.')}}
+  if(v===Q.ans){Q.done=true;stopListen();btn&&btn.classList.add('yes');const qr=$('qr');qr.textContent=fm(Q.ans);qr.className='ok';[...$('qpad').children].forEach(b=>b.disabled=true);
+    const first=Q.miss===0;record(Q.f,first,Q.tFirst);stats.push({s:Q.f.s,sec:Q.tFirst,ok:first,miss:Q.miss,via:Q.stage});
+    let tier;if(first){qStreak++;tier=TIERS[qStreak>=3?0:qStreak===2?1:2]}else{qStreak=0;tier=Q.stage==='mc4'?TIERS[2]:TIER_SMALL}
+    SFX.good();speak(first&&qStreak>=3?`${fm(Q.ans)} ! Super série !`:first?`${fm(Q.ans)} !`:`${fm(Q.ans)} ! Bravo !`);setTimeout(()=>endQuiz(tier),first?420:700)}
+  else{Q.miss++;Q.used.add(v);SFX.bad();if(player)player.coughUntil=performance.now()+1100;setTimeout(()=>SFX.cough&&SFX.cough(),120);Q.busy=true;
+    if(Q.stage==='pad'){$('qpad').classList.add('no');const qr=$('qr');qr.className='typing';qr.style.textDecoration='line-through'}
+    else{btn&&btn.classList.add('stone');[...$('qopts').children].forEach(b=>b.disabled=true)}
+    if(Q.miss>=4){Q.done=true;stopListen();record(Q.f,false,Q.tFirst);stats.push({s:Q.f.s,sec:Q.tFirst,ok:false,miss:Q.miss,via:'shown'});qStreak=0;
+      setTimeout(()=>{if(!Q)return;const good=[...$('qopts').children].find(b=>+b.dataset.v===Q.ans);good&&good.classList.add('glow');const qr=$('qr');qr.style.textDecoration='';qr.textContent=fm(Q.ans);qr.className='ok';$('qmsg').textContent='Voilà la réponse. Tu la retrouveras bientôt !';
+        speak(`${Q.f.say.replace(' ?','')}, ${fm(Q.ans)}. On continue !`);setTimeout(()=>endQuiz(null),2800)},900)}
+    else{const next=Q.miss===1?4:2;$('qmsg').textContent=Q.miss===1?'Presque ! Respire… et choisis la bonne réponse 👇':Q.miss===2?'Encore un essai : plus que deux choix !':'Courage, c’est l’un des deux !';
+      speak(Q.miss===1?'Presque ! Choisis parmi ces réponses.':Q.miss===2?'Plus que deux choix !':'Courage, essaie encore !');
+      const q0=Q;setTimeout(()=>{if(Q!==q0||Q.done)return;const qr=$('qr');qr.style.textDecoration='';Q.stage=next===4?'mc4':'mc2';Q.busy=false;$('qpad').className='hide';setQr();showChoices(next)},1400)}}
   const after=unlocked();if(after.length>before){const c=after[after.length-1];newConcepts.push(c.name);setTimeout(()=>{toast(`🎉 Nouveau : ${c.name} !`);SFX.unlock();speak(`Bravo ! Nouvelle étape : ${c.name} !`)},1400)}}
 function endQuiz(tier){$('qcard').classList.add('out');setTimeout(()=>{if(!Q||Q.done)$('quiz').classList.add('hide')},340);
   state='race';const p=player;
@@ -933,12 +969,12 @@ function updRings(){const vis=state!=='menu',A=pBB.A;let g=0;
 function loop(now){requestAnimationFrame(loop);let rdt=Math.min(.05,(now-last)/1000);last=now;postureTick();if(state==='pause'){renderer.render(scene,camera);return}
   fpsAcc+=rdt;fpsN++;if(fpsAcc>2.5){const ft=fpsAcc/fpsN;window.__ft=ft;if(ft>.026&&PR>1&&!DBG.bot){PR=Math.max(1,PR-.15);renderer.setPixelRatio(PR);resize()}fpsAcc=0;fpsN=0}
   rdt*=DBG.speed;simT+=rdt;
-  timeScale=lerp(timeScale,state==='quiz'?.22:1,Math.min(1,rdt*(state==='quiz'?10:3)));const dt=rdt*timeScale;
+  timeScale=state==='quiz'?0:lerp(timeScale,1,Math.min(1,rdt*3));const dt=rdt*timeScale;/* la course s'arrête complètement pendant le calcul */
   oceanMat.uniforms.t.value=simT;if(WF)WF.uniforms.t.value=simT;if(CIRCUIT&&CIRCUIT.tick)CIRCUIT.tick(simT,dt);
   if(state==='menu'){for(const r of racers){r.fireT-=rdt;if(r.dist<160)r.dist=160;r.dist+=12*rdt;r.speed=12;r.x=lerp(r.x,Math.sin(now*.0004+r.ph)*6,.02);r.y=Math.sin(now*.0005+r.ph)*3;poseRacer(r,rdt)}}
   else{
     if(state==='count'){cdT+=rdt;if(cdT>=1.2+cdStep&&cdStep<4){const t=['3','2','1','Partez !'][cdStep];big(t,cdStep===3);cdStep===3?SFX.go():SFX.beep();if(cdStep===3){calibrate();state='race';hintT=5;speak(`Allez ${SET.name} !`);const h=$('hint');h.innerHTML='✨ 6 anneaux d\'or = une question = 🔥 TURBO !';h.classList.remove('hide')}cdStep++}}
-    if(state!=='end'){raceT+=dt;for(const r of racers){moveRacer(r,dt);poseRacer(r,dt)}}
+    if(state!=='end'){raceT+=dt;for(const r of racers){moveRacer(r,dt);poseRacer(r,state==='quiz'?rdt*.35:dt)}}
     else for(const r of racers)poseRacer(r,rdt);
     if(state==='done'){endT+=rdt;if(endT>3.2)showEnd()}
     if(hintT>0){hintT-=rdt;if(hintT<=0)$('hint').classList.add('hide')}
