@@ -622,7 +622,7 @@ function makeRacers(){racers.forEach(r=>{scene.remove(r.mesh);if(r.label)scene.r
 const keys={};addEventListener('keydown',e=>{keys[e.key]=1});addEventListener('keyup',e=>{keys[e.key]=0});
 const stick={id:null,ox:0,oy:0,x:0,y:0,used:false};
 const stEl=$('stick'),knob=$('knob');
-canvas.addEventListener('pointerdown',e=>{ac();if(stick.id!==null||SET.ctrl==='tilt')return;stick.id=e.pointerId;stick.ox=e.clientX;stick.oy=e.clientY;stick.x=stick.y=0;stick.used=true;if(state==='race'||state==='count'){stEl.classList.remove('hide');stEl.style.left=e.clientX+'px';stEl.style.top=e.clientY+'px';knob.style.transform=''}try{canvas.setPointerCapture(e.pointerId)}catch(_){}});
+canvas.addEventListener('pointerdown',e=>{ac();if(stick.id!==null)return;stick.id=e.pointerId;stick.ox=e.clientX;stick.oy=e.clientY;stick.x=stick.y=0;stick.used=true;if(state==='race'||state==='count'){stEl.classList.remove('hide');stEl.style.left=e.clientX+'px';stEl.style.top=e.clientY+'px';knob.style.transform=''}try{canvas.setPointerCapture(e.pointerId)}catch(_){}});
 canvas.addEventListener('pointermove',e=>{if(e.pointerId!==stick.id)return;let dx=e.clientX-stick.ox,dy=e.clientY-stick.oy;const RR=Math.max(55,Math.min(80,innerHeight*.1)),len=Math.hypot(dx,dy);if(len>RR){stick.ox+=dx*(1-RR/len);stick.oy+=dy*(1-RR/len);dx=e.clientX-stick.ox;dy=e.clientY-stick.oy;stEl.style.left=stick.ox+'px';stEl.style.top=stick.oy+'px'}stick.x=dx/RR;stick.y=-dy/RR;knob.style.transform=`translate(${dx*.6}px,${dy*.6}px)`});
 const endStick=e=>{if(e.pointerId!==stick.id)return;stick.id=null;stick.x=stick.y=0;stEl.classList.add('hide')};
 canvas.addEventListener('pointerup',endStick);canvas.addEventListener('pointercancel',endStick);
@@ -642,7 +642,7 @@ function tiltInput(){if(!tilt.g)return{x:0,y:0};if(!tilt.cal)calibrate();const s
   const[dx,dy,dz]=tilt.g,proj=Math.hypot(dx,dy);const ar=Math.atan2(dx,-dy),pr=Math.asin(clamp(-dz,-1,1));
   let a=ar-tilt.cal.a;if(a>Math.PI)a-=Math.PI*2;if(a<-Math.PI)a+=Math.PI*2;const p=pr-tilt.cal.p;
   /* recentrage doux : le « neutre » suit lentement la façon dont l'enfant tient la tablette */
-  if(state==='race'){const k=dt*sp.drift;tilt.cal.a+=a*k;tilt.cal.p+=p*k}
+  if(state==='race'&&stick.id===null){const k=dt*sp.drift;tilt.cal.a+=a*k;tilt.cal.p+=p*k}
   const tx=tcurve(a,sp.dz,sp.max,sp.pow)*clamp(proj/.3,0,1),ty=tcurve(-p,sp.pdz,sp.pmax,sp.pow);const f=1-Math.exp(-dt/sp.tau);
   tilt.sx+=(tx-tilt.sx)*f;tilt.sy+=(ty-tilt.sy)*f;return{x:tilt.sx,y:tilt.sy}}
 let oriOn=false;
@@ -668,7 +668,8 @@ function onOrient(){if(portraitMQ.matches&&(state==='race'||state==='quiz'||stat
 (portraitMQ.addEventListener?portraitMQ.addEventListener('change',onOrient):portraitMQ.addListener(onOrient));
 try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('landscape').catch(()=>{})}catch(e){}
 function input(){if(DBG.bot)return DBG.bot();let x=0,y=0;if(keys.ArrowLeft||keys.a||keys.q)x-=1;if(keys.ArrowRight||keys.d)x+=1;if(keys.ArrowUp||keys.w||keys.z)y+=1;if(keys.ArrowDown||keys.s)y-=1;
-  if(SET.ctrl==='tilt'){const t=tiltInput();x+=t.x;y+=t.y}else{x+=stick.x;y+=stick.y}
+  /* le doigt prend la main quand il glisse ; au lâcher, le penché reprend en douceur */
+  const t=SET.ctrl==='tilt'?tiltInput():null;if(stick.id!==null){x+=stick.x;y+=stick.y;if(t){tilt.sx=stick.x;tilt.sy=stick.y}}else if(t){x+=t.x;y+=t.y}
   const l=Math.hypot(x,y);if(l>1){x/=l;y/=l}return{x:Math.abs(x)<.1?0:x,y:Math.abs(y)<.1?0:y}}
 
 /* ---------- Reconnaissance vocale ---------- */
@@ -764,8 +765,8 @@ function startRace(){ac();makeRacers();Q=null;stats=[];raceT=0;combo=0;ringsGot=
   rings.forEach(r=>{r.got=-9;r.hitT=-9});
   ['menu','end','pause','parents'].forEach(i=>$(i).classList.add('hide'));$('bParents').classList.add('hide');$('quiz').classList.add('hide');$('hud').classList.remove('hide');$('bCal').classList.toggle('hide',SET.ctrl!=='tilt');
   pips();$('combo').textContent='';state='count';cdT=0;cdStep=0;stick.used=false;
-  const h=$('hint');h.classList.remove('hide');h.innerHTML=SET.ctrl==='tilt'?'Tiens l\'iPad comme un volant 🚗<br>Penche pour tourner, monter, descendre':'<span class="hand">👆</span> Glisse ton doigt pour diriger ton dragon';
-  speak(SET.ctrl==='tilt'?'Tiens l\'iPad comme un volant. Penche-le pour diriger ton dragon.':'Glisse ton doigt pour diriger ton dragon. Passe dans les anneaux !',null,1.05);
+  const h=$('hint');h.classList.remove('hide');h.innerHTML=SET.ctrl==='tilt'?'Tiens l\'iPad comme un volant 🚗<br>Penche pour tourner… ou glisse ton doigt 👆':'<span class="hand">👆</span> Glisse ton doigt pour diriger ton dragon';
+  speak(SET.ctrl==='tilt'?'Tiens l\'iPad comme un volant. Penche-le pour diriger ton dragon, ou glisse ton doigt.':'Glisse ton doigt pour diriger ton dragon. Passe dans les anneaux !',null,1.05);
   updHud()}
 function onRing(r,ring){
   if(r.isP){ringsSeen++;const d=Math.hypot(ring.x-r.x,ring.y-r.y);
@@ -777,7 +778,7 @@ function onRing(r,ring){
   else{if(r.fate){r.kick=Math.min(r.kick+3.4,11);r.cnt++;if(r.cnt>=PER_Q){r.cnt=0;r.quizT=1.2+R()*5*(1.15-r.skill)}}}}
 function moveRacer(r,dt){
   const ring=rings[r.ri],ahead=r.lapBase+ring.s-r.dist;let tvx,tvy;
-  if(r.isP){const i=state==='race'?input():{x:0,y:0};const sp=SPf(),tl=SET.ctrl==='tilt'&&!DBG.bot;tvx=i.x*(tl?sp.vx:14);tvy=i.y*(tl?sp.vy:10);const ex=ring.x-r.x,ey=ring.y-r.y;const manual=i.x||i.y;
+  if(r.isP){const i=state==='race'?input():{x:0,y:0};const sp=SPf(),tl=SET.ctrl==='tilt'&&stick.id===null&&!DBG.bot;tvx=i.x*(tl?sp.vx:14);tvy=i.y*(tl?sp.vy:10);const ex=ring.x-r.x,ey=ring.y-r.y;const manual=i.x||i.y;
     if(state==='quiz'||state==='done'){tvx=clamp(ex*2.6,-12,12);tvy=clamp(ey*2.6,-10,10)}
     else if(tl){/* aide forte : on mélange la consigne de l'enfant avec le chemin vers l'anneau */
       const near=ahead<45?1:ahead<80?.5:.15,ax=clamp(ex*sp.mag,-12,12),ay=clamp(ey*sp.mag,-10,10);

@@ -8,7 +8,7 @@ Jeu de course de dragons en 3D pour apprendre le calcul mental (GS → CM2), pen
 - Progression automatique par répétition espacée (façon Anki), alignée sur les repères Eduscol, avec un rythme doux pour les tables (×2, ×5, ×10 puis ×3, ×4 en CE1 ; ×6 à ×9 en CE2).
 - Espace parents : âge de l'enfant (plafond des notions) et grille de progression.
 - Questions lues à voix haute, interface en français. Les réponses se choisissent au toucher, et seul le premier toucher compte (mauvaise réponse = bouton en pierre ; toucher en rafale = le dragon a le tournis).
-- Pilotage en penchant la tablette, avec aide à la visée et recentrage automatique ; sensibilité Facile / Moyen / Expert dans l'espace parents (le doigt sert de secours si le capteur est refusé).
+- Pilotage en penchant la tablette, avec aide à la visée et recentrage automatique ; sensibilité Facile / Moyen / Expert dans l'espace parents. On peut aussi glisser le doigt sur l'écran à tout moment : le doigt prend la main, et le penché reprend dès qu'on le lâche.
 - Jeu en paysage : en portrait, un écran « Tourne la tablette » met la course en pause. Si la tablette est posée à plat ou trop penchée, petite pause jusqu'à ce qu'elle soit tenue droite (désactivable dans l'espace parents).
 
 ## Jouer
