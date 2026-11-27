@@ -5,6 +5,7 @@ Jeu de course de dragons en 3D pour apprendre le calcul mental (GS → CM2), pen
 - Plane à travers les anneaux et bats les dragons rivaux.
 - Quatre circuits : **Les Îles volantes**, **Paris** (Arc de Triomphe, tour Eiffel, Seine, Louvre, Notre-Dame, Sacré-Cœur), **San Francisco** (Golden Gate, Alcatraz, collines, cable cars ; 30 ⭐) et **Washington** (Capitole, Washington Monument, Maison-Blanche, Lincoln, cerisiers ; 60 ⭐). Chaque circuit est un fichier de `circuits/`, chargé juste avant la course.
 - Œufs de dragon : chaque bonne réponse tapée du premier coup réchauffe l'œuf ; il éclot en fin de course et donne un bébé dragon jouable (8 à collectionner, puis des œufs d'or). Il y a toujours un œuf presque prêt.
+- Pouvoirs gagnés par les maths : 3 bonnes réponses d'affilée = souffle de feu (une boule de feu file vers le dragon devant et le fait tourner sur lui-même), 5 = bouclier de 10 s. Des cristaux mystère au centre du circuit donnent feu, bouclier, étoile turbo ou aimant à anneaux. Les rivaux crachent parfois du feu aussi ; le bouclier protège.
 - Huit dragons avec leurs compétences (vitesse, maniabilité, turbo). Quatre dragons spéciaux se débloquent avec les étoiles gagnées en course (3 ⭐ pour une victoire, +1 ⭐ pour un sans-faute).
 - Tous les 6 anneaux, une question de calcul : chaque bonne réponse donne un turbo, plus fort quand on enchaîne les bonnes réponses.
 - Pas de chronomètre visible. Le temps de réponse est mesuré discrètement pour l'espace parents.

@@ -31,6 +31,11 @@ button:focus-visible{outline:4px solid var(--sun);outline-offset:3px}
 #vig{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 50%,rgba(255,110,20,.6) 100%);opacity:0;z-index:2}
 #hud{position:fixed;inset:0;pointer-events:none;z-index:3}
 .hb{pointer-events:auto;position:absolute;top:max(12px,env(safe-area-inset-top));width:60px;height:60px;border-radius:50%;background:var(--paper);box-shadow:0 5px 0 #d8c9a8,0 8px 16px rgba(40,20,80,.25);font-size:28px;display:grid;place-items:center}
+#bItem{pointer-events:auto;position:absolute;right:max(16px,env(safe-area-inset-right));bottom:calc(max(16px,env(safe-area-inset-bottom)) + 70px);width:104px;height:104px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#fff7d6,#ffc93c 60%,#ff8a1f);box-shadow:0 7px 0 #c46a12,0 12px 26px rgba(120,40,0,.4);display:flex;flex-direction:column;align-items:center;justify-content:center;animation:ipulse 1s ease-in-out infinite;z-index:7}
+#bItem span{font-size:48px;line-height:1}#bItem small{font:700 15px Fredoka,sans-serif;color:#7a3500}
+#bItem:active{transform:translateY(5px);box-shadow:0 2px 0 #c46a12}
+@keyframes ipulse{50%{transform:scale(1.08)}}
+#shieldB{position:absolute;right:max(16px,env(safe-area-inset-right));top:170px;background:rgba(120,220,255,.9);color:#0b3a5c;font:700 22px Fredoka,sans-serif;padding:6px 14px;border-radius:20px;box-shadow:0 4px 0 #3a9cc4}
 .hb:active{transform:translateY(4px);box-shadow:0 1px 0 #d8c9a8}
 #bPause{left:12px}#bCal{left:84px}
 #posBox{position:absolute;left:50%;top:max(8px,env(safe-area-inset-top));transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:6px}
@@ -235,6 +240,8 @@ button:focus-visible{outline:4px solid var(--sun);outline-offset:3px}
 <div id="hud" class="hide">
   <button id="bPause" class="hb" aria-label="Pause">⏸</button>
   <button id="bCal" class="hb hide" aria-label="Recentrer l'inclinaison">🎯</button>
+  <button id="bItem" class="hide" aria-label="Utiliser le pouvoir"><span id="itIc">🔥</span><small id="itLb">Feu</small></button>
+  <div id="shieldB" class="hide">🛡️ <span id="shT">10</span></div>
   <div id="posBox"><div id="pos">1<small>er</small></div><div id="lap">Tour 1 / 3</div><div id="pips"></div><div id="combo"></div></div>
   <canvas id="map" width="280" height="280"></canvas>
 </div>
@@ -525,7 +532,7 @@ function setTrack(cp,tight){const curve=new THREE.CatmullRomCurve3(cp.map(p=>new
   rings.length=0;{let s=70,g=0;while(s<L-60){const pat=PATS[g%PATS.length];for(let k=0;k<6&&s<L-40;k++){let[x,y]=pat(k);x*=RING_EASE;y*=RING_EASE;if(inT(s)){x=0;y=0}rings.push({s,x,y});s+=46}s+=34;g++}}
   for(const r of rings){r.pos=worldAt(r.s,r.x,r.y,new THREE.Vector3());frame(r.s);dummy.position.copy(r.pos);dummy.up.copy(F.U);dummy.lookAt(r.pos.clone().add(F.T));r.q=dummy.quaternion.clone();r.got=-9;r.hitT=-9}
   if(ringMesh){scene.remove(ringMesh);ringMesh.dispose()}
-  ringMesh=new THREE.InstancedMesh(ringGeo,ringMat,rings.length);ringMesh.frustumCulled=false;ringMesh.setColorAt(0,new THREE.Color(0xffc93a));scene.add(ringMesh);mapDirty=true}
+  ringMesh=new THREE.InstancedMesh(ringGeo,ringMat,rings.length);ringMesh.frustumCulled=false;ringMesh.setColorAt(0,new THREE.Color(0xffc93a));scene.add(ringMesh);mapDirty=true;if(typeof placeBoxes==='function')try{placeBoxes()}catch(e){}}
 let mapDirty=true;
 const C_GOLD=new THREE.Color(0xffc93a),C_MAGIC=new THREE.Color(0xff5fb8),C_NEXT=new THREE.Color(0xfff2a0);
 
@@ -735,7 +742,7 @@ function makeRacers(){racers.forEach(r=>{scene.remove(r.mesh);if(r.label)scene.r
   const prof=[{base:35.2,skill:.82},{base:34.3,skill:.7},{base:33.4,skill:.55}];
   const slots=[-9,-3,3,9],pSlot=1;let k=0;
   for(let i=0;i<4;i++){const isP=i===pSlot,di=isP?me:others[k],pr=isP?{base:BASE*SK(DRAG[di]).speed,skill:1}:prof[k++];const d=DRAG[di];
-    const r={d,isP,name:isP?'Toi':d.name,mesh:makeDragon(d),dist:-10,x:slots[i],y:0,vx:0,vy:0,speed:0,kick:0,boostT:0,boostMul:1,fireT:0,ri:0,lapBase:0,lap:0,cnt:0,quizT:0,base:pr.base,skill:pr.skill,ph:R()*6,fateIdx:-1,fate:true,mx:0,my:0,flap:R()*6,finishT:0,roll:0,t:R()*10};
+    const r={d,isP,slowT:0,shieldT:0,fireCd:22+R()*20,item:null,magnetT:0,name:isP?'Toi':d.name,mesh:makeDragon(d),dist:-10,x:slots[i],y:0,vx:0,vy:0,speed:0,kick:0,boostT:0,boostMul:1,fireT:0,ri:0,lapBase:0,lap:0,cnt:0,quizT:0,base:pr.base,skill:pr.skill,ph:R()*6,fateIdx:-1,fate:true,mx:0,my:0,flap:R()*6,finishT:0,roll:0,t:R()*10};
     if(!isP)r.label=label(d.name,d.css);racers.push(r);if(isP)player=r}}
 
 /* ---------- Entrées ---------- */
@@ -867,7 +874,7 @@ function answer(v,btn){if(!Q||Q.done||Q.busy)return;v=r3(v);const sec=(performan
   const before=unlocked().length;
   if(v===Q.ans){Q.done=true;stopListen();btn&&btn.classList.add('yes');const qr=$('qr');qr.textContent=fm(Q.ans);qr.className='ok';[...$('qpad').children].forEach(b=>b.disabled=true);
     const first=Q.miss===0;if(first){const was=eggReady();eggHeat(1);if(!was&&eggReady())setTimeout(()=>{toast('🥚 Crac ! Ton œuf va éclore à l’arrivée !');speak('Ton œuf va éclore à l’arrivée !')},900)}record(Q.f,first,Q.tFirst);stats.push({s:Q.f.s,sec:Q.tFirst,ok:first,miss:Q.miss,via:Q.stage});
-    let tier;if(first){qStreak++;tier=TIERS[qStreak>=3?0:qStreak===2?1:2]}else{qStreak=0;tier=Q.stage==='mc4'?TIERS[2]:TIER_SMALL}
+    let tier;if(first){qStreak++;tier=TIERS[qStreak>=3?0:qStreak===2?1:2];const qs=qStreak;if(qs%5===3)setTimeout(()=>giveItem(player,'fire','serie'),900);else if(qs%5===0)setTimeout(()=>giveItem(player,'shield','serie'),900)}else{qStreak=0;tier=Q.stage==='mc4'?TIERS[2]:TIER_SMALL}
     SFX.good();speak(first&&qStreak>=3?`${fm(Q.ans)} ! Super série !`:first?`${fm(Q.ans)} !`:`${fm(Q.ans)} ! Bravo !`);setTimeout(()=>endQuiz(tier),first?420:700)}
   else{Q.miss++;Q.used.add(v);SFX.bad();if(player)player.coughUntil=performance.now()+1100;setTimeout(()=>SFX.cough&&SFX.cough(),120);Q.busy=true;
     if(Q.stage==='pad'){$('qpad').classList.add('no');const qr=$('qr');qr.className='typing';qr.style.textDecoration='line-through'}
@@ -904,16 +911,50 @@ function updHud(){const order=[...racers].sort((a,b)=>b.dist-a.dist);const rank=
 
 /* ---------- Course ---------- */
 let state='menu',raceT=0,cdT=0,cdStep=0,combo=0,shake=0,timeScale=1,boostVis=0,hintT=0,endT=0,ringsGot=0,ringsSeen=0,lastTouchHint=0,simT=0;
-function startRace(){ac();makeRacers();Q=null;stats=[];raceT=0;combo=0;ringsGot=0;ringsSeen=0;lastRank=0;qStreak=0;newConcepts=[];
+function startRace(){ac();makeRacers();Q=null;fireballs.length=0;BOXES.forEach(b=>b.got=-9);updItem();stats=[];raceT=0;combo=0;ringsGot=0;ringsSeen=0;lastRank=0;qStreak=0;newConcepts=[];
   rings.forEach(r=>{r.got=-9;r.hitT=-9});
   ['menu','end','pause','parents'].forEach(i=>$(i).classList.add('hide'));$('bParents').classList.add('hide');$('quiz').classList.add('hide');$('hud').classList.remove('hide');$('bCal').classList.toggle('hide',SET.ctrl!=='tilt');
   pips();$('combo').textContent='';state='count';cdT=0;cdStep=0;stick.used=false;
   const h=$('hint');h.classList.remove('hide');h.innerHTML=SET.ctrl==='tilt'?'Tiens l\'iPad comme un volant 🚗<br>Penche pour tourner… ou glisse ton doigt 👆':'<span class="hand">👆</span> Glisse ton doigt pour diriger ton dragon';
   speak(SET.ctrl==='tilt'?'Tiens l\'iPad comme un volant. Penche-le pour diriger ton dragon, ou glisse ton doigt.':'Glisse ton doigt pour diriger ton dragon. Passe dans les anneaux !',null,1.05);
   updHud()}
+/* ---------- Pouvoirs (gagnés surtout par les maths) ---------- */
+const ITEMS={fire:{ic:'🔥',lb:'Feu',say:'Souffle de feu'},shield:{ic:'🛡️',lb:'Bouclier',say:'Bouclier'},star:{ic:'🌟',lb:'Étoile',say:'Étoile turbo'},magnet:{ic:'🧲',lb:'Aimant',say:'Aimant à anneaux'}};
+const fireballs=[];let fireHinted=store.get('fireHint',false);
+function shieldMesh(r){if(!r.shield){const m=new THREE.Mesh(new THREE.SphereGeometry(4.6,20,14),new THREE.MeshBasicMaterial({color:0x7fe4ff,transparent:true,opacity:.22,blending:THREE.AdditiveBlending,depthWrite:false}));m.position.set(0,.3,0);r.mesh.add(m);r.shield=m}return r.shield}
+function giveItem(r,k,why){if(k==='shield'&&why==='serie'){r.shieldT=10;if(r.isP){toast('🛡️ 5 bonnes réponses d’affilée : bouclier !');speak('Bouclier !');SFX.unlock()}return}
+  if(r.item){if(r.isP&&why!=='serie'){r.kick=Math.min(r.kick+4,12);toast('✨ Petit turbo !')}if(why!=='serie')return}
+  r.item=k;if(r.isP){updItem();const it=ITEMS[k];toast(`${it.ic} ${why==='serie'?'3 bonnes réponses : ':''}${it.say} !`);speak(it.say+' !');SFX.unlock();
+    if(k==='fire'&&!fireHinted){fireHinted=true;store.set('fireHint',true);setTimeout(()=>{const h=$('hint');h.innerHTML='Touche 🔥 pour lancer du feu sur le dragon devant toi !';h.classList.remove('hide');hintT=4.5},1600)}}}
+function updItem(){const b=$('bItem');if(!player||!player.item||state==='end'||state==='done'){b.classList.add('hide');return}const it=ITEMS[player.item];$('itIc').textContent=it.ic;$('itLb').textContent=it.lb;b.classList.remove('hide')}
+function useItem(r){const k=r.item;if(!k)return;r.item=null;if(r.isP)updItem();
+  if(k==='fire')launchFire(r);else if(k==='shield'){r.shieldT=10;if(r.isP)speak('Bouclier !')}
+  else if(k==='star'){const t=TIERS[1];r.boostT=t.dur;r.boostMul=t.mul;r.kick=Math.min(r.kick+t.kick,12);r.fireT=.6;if(r.isP){big('Étoile turbo !',true);SFX.boost(false)}}
+  else if(k==='magnet'){r.magnetT=9;if(r.isP){toast('🧲 Les anneaux viennent à toi !');SFX.unlock()}}}
+function launchFire(r){const ahead=racers.filter(o=>o!==r&&o.dist>r.dist-4&&o.dist<r.dist+160).sort((a,b)=>a.dist-b.dist)[0];
+  fireballs.push({from:r,to:ahead||null,dist:r.dist+3,x:r.x,y:r.y,life:3.2});r.fireT=.9;SFX.roar();if(r.isP&&!ahead)toast('🔥 Personne devant… vise un dragon !');
+  if(!r.isP&&ahead&&ahead.isP&&ahead.shieldT<=0){toast(`⚠️ ${r.name} te lance du feu !`)}}
+function updFire(dt){for(let i=fireballs.length-1;i>=0;i--){const f=fireballs[i];f.life-=dt;const t=f.to;const sp=(f.from.speed||30)+70;f.dist+=sp*dt;
+    if(t){f.x+= (t.x-f.x)*Math.min(1,dt*5);f.y+=(t.y-f.y)*Math.min(1,dt*5)}
+    worldAt(f.dist,f.x,f.y,tv);for(let k=0;k<3;k++){tv2.set((R()-.5)*4,(R()-.5)*4,(R()-.5)*4);emit(tv,tv2,.35+R()*.3,2+R()*2.2,[0xffe27a,0xff9a2e,0xff5a1f][Math.floor(R()*3)],3)}
+    if(t&&f.dist>=t.dist){fireballs.splice(i,1);hitFire(f.from,t);continue}
+    if(f.life<=0)fireballs.splice(i,1)}}
+function hitFire(from,t){const p=t.mesh.position;
+  if(t.shieldT>0){for(let i=0;i<24;i++){tv.set((R()-.5)*14,(R()-.5)*14,(R()-.5)*14);emit(p,tv,.6,1.6,0x9ff0ff,2)}if(t.isP){toast('🛡️ Ton bouclier t’a protégé !');SFX.good()}else if(from.isP)toast(`🛡️ ${t.name} avait un bouclier !`);return}
+  t.slowT=1.8;t.dizzyUntil=performance.now()+1600;for(let i=0;i<26;i++){tv.set((R()-.5)*10,R()*6,(R()-.5)*10);emit(p,tv,.9+R()*.5,2+R()*2,[0x8a8494,0x6f6a7a,0xb3aebd,0xffa040][i%4],1.8)}
+  if(from.isP){toast(`🔥 Pouf ! ${t.name} fait des tonneaux !`);SFX.pass();speak('Pouf !')}else if(t.isP){SFX.cough&&SFX.cough();speak('Oups ! Ça chatouille !')}}
+/* cristaux mystère posés sur le circuit (au centre, faciles à prendre) */
+const BOXES=[];let boxMesh=null;
+function placeBoxes(){BOXES.length=0;if(boxMesh){scene.remove(boxMesh);boxMesh.dispose()}const fr=[.22,.5,.78];
+  for(const f of fr){let s=f*L;const ri=rings.findIndex(q=>q.s>s);if(ri>0)s=(rings[ri-1].s+rings[ri].s)/2;BOXES.push({s,pos:worldAt(s,0,0,new THREE.Vector3()),got:-9})}
+  boxMesh=new THREE.InstancedMesh(new THREE.OctahedronGeometry(2.2,0),new THREE.MeshStandardMaterial({color:0xffffff,emissive:0x6a3cff,emissiveIntensity:.6,metalness:.4,roughness:.15}),BOXES.length);boxMesh.frustumCulled=false;boxMesh.setColorAt(0,new THREE.Color(1,1,1));scene.add(boxMesh)}
+function updBoxes(){if(!boxMesh)return;const c=new THREE.Color();BOXES.forEach((b,i)=>{const vis=state!=='menu'&&b.got!==player.lap;dummy.position.copy(b.pos);dummy.rotation.set(simT*1.4,simT*2,0);dummy.scale.setScalar(vis?1+Math.sin(simT*5+i)*.12:0);dummy.updateMatrix();boxMesh.setMatrixAt(i,dummy.matrix);boxMesh.setColorAt(i,c.setHSL((simT*.2+i*.33)%1,.9,.65))});boxMesh.instanceMatrix.needsUpdate=true;boxMesh.instanceColor.needsUpdate=true}
+if(rings.length)placeBoxes();
+function checkBoxes(r,prev){for(const b of BOXES){const bs=r.lapBase+b.s;if(prev<bs&&r.dist>=bs&&b.got!==r.lap){if(Math.hypot(r.x,r.y)<7.5){b.got=r.lap;const roll=R(),k=roll<.4?'fire':roll<.6?'star':roll<.8?'magnet':'shield';giveItem(r,k,'box');for(let i=0;i<20;i++){tv.set((R()-.5)*12,(R()-.5)*12,(R()-.5)*12);emit(b.pos,tv,.7,1.8,[0xff7ac0,0x7af6ff,0xfff27a,0xb59bff][i%4],2)}}}}}
+$('bItem').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();if(state==='race'&&player)useItem(player)});
 function onRing(r,ring){
   if(r.isP){ringsSeen++;const d=Math.hypot(ring.x-r.x,ring.y-r.y);
-    if(d<4.6){ring.got=r.lap;ring.hitT=raceT;ringsGot++;combo++;r.kick=Math.min(r.kick+3.6,11);r.cnt++;SFX.ring(combo);
+    if(d<(r.magnetT>0?11:4.6)){ring.got=r.lap;ring.hitT=raceT;ringsGot++;combo++;r.kick=Math.min(r.kick+3.6,11);r.cnt++;SFX.ring(combo);
       for(let i=0;i<30;i++){const a=i/30*6.28;tv.set(Math.cos(a)*10,Math.sin(a)*10,0).applyQuaternion(ring.q);emit(ring.pos.clone().addScaledVector(tv,.42),tv,.7,1.6+R()*1.2,i%3?0xffd23d:0xfff8e0,2.6)}
       pips();$('combo').textContent=combo>=3?`Série ${combo} ✨`:'';
       if(r.cnt>=PER_Q&&state==='race'){r.cnt=0;setTimeout(()=>{if(state==='race')startQuiz();pips()},150)}}
@@ -939,9 +980,11 @@ function moveRacer(r,dt){
   if(!r.isP){const gap=r.dist-player.dist,late=player.dist>(LAPS-1)*L+L*.45;base*=1+clamp(-gap/420,-.13,late?.05:.15);
     if(r.quizT>0){r.quizT-=dt;if(r.quizT<=0){const x=R();const ti=x<r.skill*.6?0:x<r.skill?1:2;r.boostT=TIERS[ti].dur;r.boostMul=TIERS[ti].mul;r.fireT=ti===0?1:.5;r.kick=Math.min(r.kick+TIERS[ti].kick,12)}}}
   const go=state!=='count';
+  if(r.slowT>0){r.slowT-=dt;base*=.55}if(r.shieldT>0){r.shieldT-=dt}if(r.magnetT>0)r.magnetT-=dt;
+  if(!r.isP&&state==='race'&&go){r.fireCd-=dt;if(r.fireCd<=0){r.fireCd=32+R()*22;if(player.dist>r.dist+12&&player.dist<r.dist+90&&!player.finishT)launchFire(r)}}
   const tgt=go?base*(r.boostT>0?r.boostMul:1)*(r.isP&&SET.ctrl==='tilt'?1-SPf().slow*clamp(Math.abs(r.vx)/12,0,1):1)+r.kick:0;
   r.speed+=(tgt-r.speed)*Math.min(1,dt*(tgt>r.speed?2.4:1.1));r.kick*=Math.exp(-dt/1.8);r.boostT-=dt;r.fireT-=dt;
-  r.dist+=r.speed*dt;
+  const prevD=r.dist;r.dist+=r.speed*dt;if(r.isP&&dt>0)checkBoxes(r,prevD);
   while(r.dist>=r.lapBase+rings[r.ri].s){onRing(r,rings[r.ri]);r.ri++;if(r.ri>=rings.length){r.ri=0;r.lapBase+=L}}
   const lp=Math.floor(Math.max(0,r.dist)/L);
   if(lp>r.lap){r.lap=lp;if(r.lap>=LAPS&&!r.finishT){r.finishT=raceT;if(r.isP)finish()}else if(r.isP&&r.lap<LAPS){SFX.lap();if(r.lap===LAPS-1){big('Dernier tour !');speak('Dernier tour !')}else{big(`Tour ${r.lap+1}`);speak(`Tour ${r.lap+1}`)}}}
@@ -958,6 +1001,7 @@ function poseRacer(r,dt){const m=r.mesh;worldAt(r.dist,r.x,r.y,m.position);
   const u=m.userData.mat.userData.u;u.uTime.value=r.t;u.uBank.value=lerp(u.uBank.value,clamp(r.vx*.05,-.6,.6),Math.min(1,dt*3));u.uSway.value=boosting?.5:1;
   m.position.addScaledVector(F.U,glide?0:-Math.sin(r.flap)*.15);
   if(r.label){r.label.position.copy(m.position).addScaledVector(F.U,3.4);const d=r.label.position.distanceTo(camera.position);r.label.visible=d<170&&state!=='menu';const k=clamp(d/40,.6,1.6);r.label.scale.set(6*k,1.7*k,1)}
+  if(r.shieldT>0||r.shield){const sm=shieldMesh(r);sm.visible=r.shieldT>0;sm.material.opacity=.3+.1*Math.sin(r.t*8)+(r.shieldT<2?.1*Math.sin(r.t*30):0)}
   if(r.d.aurora){const h=(r.t*.12+r.ph)%1;u.uRim.value.setHSL(h,.9,.7);m.userData.wm.emissive.setHSL((h+.3)%1,.9,.55)}
   if(dt>0){
     if(r.d.trail&&R()<(state==='menu'?.5:.8)){tv.set((R()-.5)*.6,.2,-5.4*.8);m.localToWorld(tv);tv2.set((R()-.5)*3,(R()-.5)*3,(R()-.5)*3);const tc=r.d.trail;emit(tv,tv2,.6+R()*.5,.9+R()*1.1,tc[Math.floor(R()*tc.length)],1.6)}
@@ -968,7 +1012,7 @@ function finish(){state='done';endT=0;SFX.fan();const place=1+racers.filter(r=>!
   big(place===1?'Victoire !':`${place}${ORD(place)} !`,place===1);speak(place===1?`Victoire ! Bravo ${SET.name}, tu as gagné la course !`:`Tu finis ${place===2?'deuxième':place===3?'troisième':'quatrième'} ! Bravo !`);
   for(let i=0;i<120;i++){tv.set((R()-.5)*30,R()*20+5,(R()-.5)*30);emit(player.mesh.position,tv,2+R(),1.4+R()*1.4,[0xff6f9f,0xffc93c,0x5ee0ff,0x7ccf4a,0x9b5de5][i%5],.8)}
   player.place=place}
-function showEnd(){state='end';$('hud').classList.add('hide');$('quiz').classList.add('hide');$('hint').classList.add('hide');
+function showEnd(){state='end';$('bItem').classList.add('hide');$('shieldB').classList.add('hide');$('hud').classList.add('hide');$('quiz').classList.add('hide');$('hint').classList.add('hide');
   const place=player.place;const order=[...racers].sort((a,b)=>(a.finishT||1e9)-(b.finishT||1e9)||b.dist-a.dist);
   const idx=order.indexOf(player);if(idx!==place-1){order.splice(idx,1);order.splice(place-1,0,player)}
   $('eIcon').textContent=['🏆','🥈','🥉','🏅'][place-1];$('eTitle').textContent=place===1?'Tu as gagné !':`Tu es ${place}${ORD(place)} !`;
@@ -1039,7 +1083,7 @@ function loop(now){requestAnimationFrame(loop);let rdt=Math.min(.05,(now-last)/1
   boostVis=lerp(boostVis,player&&player.boostT>0&&state!=='menu'?1:0,Math.min(1,rdt*5));$('vig').style.opacity=(boostVis*.85).toFixed(2);
   slMat.opacity=boostVis*.5+(player&&state!=='menu'?clamp((player.speed-38)/30,0,.22):0);sl.visible=slMat.opacity>.02;
   if(sl.visible){for(let i=0;i<SLN;i++){const s=sls[i];s.z+=rdt*(60+boostVis*90);if(s.z>2){s.z=-80;const a=R()*6.28,r=3.5+R()*7;s.x=Math.cos(a)*r;s.y=Math.sin(a)*r}dummy.position.set(s.x,s.y,s.z);dummy.quaternion.identity();dummy.scale.set(1,1,1+boostVis);dummy.updateMatrix();sl.setMatrixAt(i,dummy.matrix)}sl.instanceMatrix.needsUpdate=true}
-  if(player)updRings();updParts(rdt);pBB.dirty();updCamera(rdt);renderer.render(scene,camera)}
+  if(player){updRings();updBoxes();if(state!=='menu'){updFire(timeScale>0?dt:0);const sb=$('shieldB');if(player.shieldT>0&&state!=='end'){sb.classList.remove('hide');$('shT').textContent=Math.ceil(player.shieldT)}else sb.classList.add('hide')}}updParts(rdt);pBB.dirty();updCamera(rdt);renderer.render(scene,camera)}
 
 /* ---------- Menu ---------- */
 const bars=n=>'●'.repeat(n)+'<s>'+'●'.repeat(5-n)+'</s>';
@@ -1106,7 +1150,7 @@ function renderParents(){const ceil=CEIL[AGE],unl=unlocked().length;const st=stu
     if(b.dataset.reset){if(b.dataset.reset==='1'){b.dataset.reset='2';b.textContent='Sûr ? Toucher encore';return}PROG={};TO={};relearn=[];store.set('prog',PROG);store.set('to',TO);renderParents()}}}
 $('bParents').onclick=openGate;
 
-window.__race={get state(){return state},get EGG(){return EGG},set EGG(v){EGG=v},hatchEgg,PORT,teleport(x,y,z){const s=nearestS(new THREE.Vector3(x,y,z));for(const r of racers){const lap=Math.floor(Math.max(0,r.dist)/L);r.dist=lap*L+s+(r.isP?0:120+R()*60);r.lapBase=lap*L;r.ri=rings.findIndex(q=>q.s>s);if(r.ri<0){r.ri=0;r.lapBase+=L}}camInit=false},loadCircuit,ensureCircuit,get CIRCUIT(){return CIRCUIT},CIRCUITS,DRAG,get STARS(){return STARS},set STARS(v){STARS=v},POS,tilt,tiltInput,get SENS(){return SENS},set SENS(v){SENS=v},setCtrl(c){SET.ctrl=c},postureTick,onOri,get player(){return player},get racers(){return racers},get Q(){return Q},answer,rings,L,get stats(){return stats},startRace,pickFact,record,unlocked,get PROG(){return PROG},CONCEPTS,setAge(a){AGE=a},renderParents,frNums};
+window.__race={get state(){return state},giveItem,useItem,fireballs,BOXES,get EGG(){return EGG},set EGG(v){EGG=v},hatchEgg,PORT,teleport(x,y,z){const s=nearestS(new THREE.Vector3(x,y,z));for(const r of racers){const lap=Math.floor(Math.max(0,r.dist)/L);r.dist=lap*L+s+(r.isP?0:120+R()*60);r.lapBase=lap*L;r.ri=rings.findIndex(q=>q.s>s);if(r.ri<0){r.ri=0;r.lapBase+=L}}camInit=false},loadCircuit,ensureCircuit,get CIRCUIT(){return CIRCUIT},CIRCUITS,DRAG,get STARS(){return STARS},set STARS(v){STARS=v},POS,tilt,tiltInput,get SENS(){return SENS},set SENS(v){SENS=v},setCtrl(c){SET.ctrl=c},postureTick,onOri,get player(){return player},get racers(){return racers},get Q(){return Q},answer,rings,L,get stats(){return stats},startRace,pickFact,record,unlocked,get PROG(){return PROG},CONCEPTS,setAge(a){AGE=a},renderParents,frNums};
 try{makePortraits()}catch(e){console.error(e)}makeRacers();refreshMenu();requestAnimationFrame(loop);
 }
 </script>
