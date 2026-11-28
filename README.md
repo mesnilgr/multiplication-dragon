@@ -12,7 +12,8 @@ Jeu de course de dragons en 3D pour apprendre le calcul mental (GS → CM2), pen
 - Progression automatique par répétition espacée (façon Anki), alignée sur les repères Eduscol, avec un rythme doux pour les tables (×2, ×5, ×10 puis ×3, ×4 en CE1 ; ×6 à ×9 en CE2).
 - Espace parents : « Recommencer le jeu » (étoiles, œufs, dragons, circuits) et « Effacer les calculs », avec confirmation.
 - Espace parents : âge de l'enfant (plafond des notions) et grille de progression.
-- Questions lues à voix haute, interface en français. Pendant le calcul, la course s'arrête complètement. La réponse se tape au clavier numérique ; si elle est fausse, QCM à 4 choix, puis à 2 choix, puis la réponse est montrée au 4e raté (avec une petite pause entre les essais).
+- Questions lues à voix haute, interface en français. Pendant le calcul, la course s'arrête complètement. Le clavier n'apparaît qu'un peu après la question. 3 essais au clavier (avec une pause entre chaque), puis QCM à 4 choix, puis à 2 choix, puis la réponse est montrée. Le calcul complet est lu à voix haute (« 3 plusse 2 égal 5 »).
+- Impossible d'échapper aux maths : les anneaux ratés comptent aussi pour la prochaine question, et une question surprise arrive si aucune n'a été posée depuis 15 s.
 - Pilotage en penchant la tablette, avec aide à la visée et recentrage automatique ; sensibilité Facile / Moyen / Expert dans l'espace parents. On peut aussi glisser le doigt sur l'écran à tout moment : le doigt prend la main, et le penché reprend dès qu'on le lâche.
 - Jeu en paysage : en portrait, un écran « Tourne la tablette » met la course en pause. Si la tablette est posée à plat ou trop penchée, petite pause jusqu'à ce qu'elle soit tenue droite (désactivable dans l'espace parents).
 

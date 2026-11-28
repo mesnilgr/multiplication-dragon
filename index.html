@@ -82,6 +82,7 @@ button:focus-visible{outline:4px solid var(--sun);outline-offset:3px}
 #qpad{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px}
 #qpad.wait{visibility:hidden}
 #qpad.no{animation:shake .45s}
+#qpad.rest{opacity:.35;pointer-events:none;transition:opacity .3s}
 .key{height:clamp(58px,9vh,74px);border-radius:20px;background:#fff3c4;font:700 clamp(30px,4.6vw,42px) Andika,Fredoka,sans-serif;color:#5a3a00;box-shadow:0 6px 0 #e8c64a}
 .key:active{transform:translateY(5px);box-shadow:0 1px 0 #e8c64a}
 .key.ok{background:#7dd87d;color:#fff;box-shadow:0 6px 0 #3ea44a}
@@ -457,7 +458,7 @@ function pickVoice(){if(!window.speechSynthesis)return;const vs=speechSynthesis.
 if(window.speechSynthesis){pickVoice();speechSynthesis.onvoiceschanged=pickVoice}
 function speak(t,onend,rate=1.02){let done=false;const fin=()=>{if(!done){done=true;onend&&onend()}};
   if(!window.speechSynthesis){setTimeout(fin,300);return}
-  try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang='fr-FR';if(frVoice)u.voice=frVoice;u.rate=rate;u.pitch=1.1;u.onend=fin;u.onerror=fin;speechSynthesis.speak(u);setTimeout(fin,600+t.length*75)}catch(e){fin()}}
+  try{speechSynthesis.cancel();t=String(t).replace(/(\d) plus /g,'$1 plusse ');const u=new SpeechSynthesisUtterance(t);u.lang='fr-FR';if(frVoice)u.voice=frVoice;u.rate=rate;u.pitch=1.1;u.onend=fin;u.onerror=fin;speechSynthesis.speak(u);setTimeout(fin,600+t.length*75)}catch(e){fin()}}
 
 /* ---------- Rendu ---------- */
 const canvas=$('c');
@@ -834,16 +835,21 @@ function options(f){const a=f.ans,set=new Set([a]);let near,far;
   for(let c of[...shuffle(near),...shuffle(far)]){c=r3(c);if(c>=0&&!set.has(c)&&set.size<4)set.add(c)}return shuffle([...set])}
 let Q=null,stats=[],qStreak=0,newConcepts=[];
 const TIERS=[{t:'SUPER TURBO !',mul:1.8,dur:3.4,kick:6},{t:'TURBO !',mul:1.6,dur:2.8,kick:4.5},{t:'Turbo !',mul:1.42,dur:2.2,kick:3}];const TIER_SMALL={t:'Bien joué !',mul:1.2,dur:1.6,kick:2};
-function startQuiz(){const f=pickFact();let txt=f.txt,say=f.say;
+function sayEq(){const t=Q.txt,a=fm(Q.ans),s=Q.f.s||'';
+  if(t.includes('→'))return s.startsWith('ap')?`Après ${t.split('→')[0].trim()}, c'est ${a}`:`Avant ${t.split('→')[1].trim()}, c'est ${a}`;
+  if(!t.includes('='))return `${Q.f.say.replace(' ?','')}, ${a}`;
+  return t.replace('?',a).replace(/ \+ /g,' plusse ').replace(/ − | - /g,' moins ').replace(/ × /g,' fois ').replace(/ ÷ /g,' divisé par ').replace(/\//g,' sur ').replace(/ = /g,' égal ').replace(/=/g,' égal ')}
+let lastQuizT=0;const QUIZ_MAX=15;window.__qlog=[];
+function startQuiz(){window.__qlog.push(Math.round(raceT));const f=pickFact();let txt=f.txt,say=f.say;
   if(f.mul&&f.mul[0]!==f.mul[1]&&R()<.35){txt=`${f.mul[1]} × ${f.mul[0]} = ?`;say=`${f.mul[1]} fois ${f.mul[0]} ?`}
-  Q={f,ans:f.ans,t0:performance.now(),tries:0,done:false,shown:false,taps:[]};state='quiz';autoTries=0;
+  Q={f,txt,ans:f.ans,t0:performance.now(),tries:0,done:false,shown:false,taps:[]};state='quiz';autoTries=0;
   const qq=$('qq');qq.innerHTML=txt.replace('?','<span id="qr">?</span>');qq.classList.toggle('long',txt.length>13);
   $('qlab').textContent=f.lab||f.c.name;$('qfl').textContent=qStreak>=1?`Série ${'🔥'.repeat(Math.min(3,qStreak))}`:'';
   const dEl=$('qdots');if(f.dots){dEl.innerHTML=f.dots.map(n=>'<span>'+'<i></i>'.repeat(n)+'</span>').join(f.dots.length>1?'+':'');dEl.classList.remove('hide')}else dEl.classList.add('hide');
   Q.stage='pad';Q.miss=0;Q.input='';Q.tFirst=null;Q.used=new Set();Q.dec=!Number.isInteger(f.ans);
   $('qmsg').textContent='';$('qopts').innerHTML='';buildPad();$('qpad').className='wait';
   $('qmicrow').classList.add('hide');$('qcard').classList.remove('out');$('quiz').classList.remove('hide');stick.id=null;stick.x=stick.y=0;stEl.classList.add('hide');
-  const q0=Q;SFX.q();speak(say,()=>revealOpts(q0,500),1.02);setTimeout(()=>revealOpts(q0,0),3200)}
+  const q0=Q;SFX.q();speak(say,()=>revealOpts(q0,1600),1.02);setTimeout(()=>revealOpts(q0,0),5200)}
 /* Étapes : 1) clavier  2) QCM à 4 choix (après 1 raté)  3) QCM à 2 choix (après 2 ratés)  4) réponse montrée (après 4 ratés) */
 function buildPad(){const k=['1','2','3','4','5','6','⌫','7','8','9','0',Q.dec?',':'','✓'].filter(x=>x!=='');const pad=$('qpad');
   pad.style.gridTemplateColumns=`repeat(${Math.ceil(k.length/2)},minmax(0,1fr))`;
@@ -874,19 +880,22 @@ function answer(v,btn){if(!Q||Q.done||Q.busy)return;v=r3(v);const sec=(performan
   const before=unlocked().length;
   if(v===Q.ans){Q.done=true;stopListen();btn&&btn.classList.add('yes');const qr=$('qr');qr.textContent=fm(Q.ans);qr.className='ok';[...$('qpad').children].forEach(b=>b.disabled=true);
     const first=Q.miss===0;if(first){const was=eggReady();eggHeat(1);if(!was&&eggReady())setTimeout(()=>{toast('🥚 Crac ! Ton œuf va éclore à l’arrivée !');speak('Ton œuf va éclore à l’arrivée !')},900)}record(Q.f,first,Q.tFirst);stats.push({s:Q.f.s,sec:Q.tFirst,ok:first,miss:Q.miss,via:Q.stage});
-    let tier;if(first){qStreak++;tier=TIERS[qStreak>=3?0:qStreak===2?1:2];const qs=qStreak;if(qs%5===3)setTimeout(()=>giveItem(player,'fire','serie'),900);else if(qs%5===0)setTimeout(()=>giveItem(player,'shield','serie'),900)}else{qStreak=0;tier=Q.stage==='mc4'?TIERS[2]:TIER_SMALL}
-    SFX.good();speak(first&&qStreak>=3?`${fm(Q.ans)} ! Super série !`:first?`${fm(Q.ans)} !`:`${fm(Q.ans)} ! Bravo !`);setTimeout(()=>endQuiz(tier),first?420:700)}
+    let tier;if(first){qStreak++;tier=TIERS[qStreak>=3?0:qStreak===2?1:2];const qs=qStreak;if(qs%5===3)setTimeout(()=>giveItem(player,'fire','serie'),900);else if(qs%5===0)setTimeout(()=>giveItem(player,'shield','serie'),900)}else{qStreak=0;tier=Q.stage==='pad'||Q.stage==='mc4'?TIERS[2]:TIER_SMALL}
+    SFX.good();const eq=sayEq();speak(first&&qStreak>=3?`${eq} ! Super série !`:first?`${eq} !`:`${eq} ! Bravo !`);setTimeout(()=>endQuiz(tier),1700)}
   else{Q.miss++;Q.used.add(v);SFX.bad();if(player)player.coughUntil=performance.now()+1100;setTimeout(()=>SFX.cough&&SFX.cough(),120);Q.busy=true;
     if(Q.stage==='pad'){$('qpad').classList.add('no');const qr=$('qr');qr.className='typing';qr.style.textDecoration='line-through'}
     else{btn&&btn.classList.add('stone');[...$('qopts').children].forEach(b=>b.disabled=true)}
-    if(Q.miss>=4){Q.done=true;stopListen();record(Q.f,false,Q.tFirst);stats.push({s:Q.f.s,sec:Q.tFirst,ok:false,miss:Q.miss,via:'shown'});qStreak=0;
+    if(Q.miss>=5){Q.done=true;stopListen();record(Q.f,false,Q.tFirst);stats.push({s:Q.f.s,sec:Q.tFirst,ok:false,miss:Q.miss,via:'shown'});qStreak=0;
       setTimeout(()=>{if(!Q)return;const good=[...$('qopts').children].find(b=>+b.dataset.v===Q.ans);good&&good.classList.add('glow');const qr=$('qr');qr.style.textDecoration='';qr.textContent=fm(Q.ans);qr.className='ok';$('qmsg').textContent='Voilà la réponse. Tu la retrouveras bientôt !';
-        speak(`${Q.f.say.replace(' ?','')}, ${fm(Q.ans)}. On continue !`);setTimeout(()=>endQuiz(null),2800)},900)}
-    else{const next=Q.miss===1?4:2;$('qmsg').textContent=Q.miss===1?'Presque ! Respire… et choisis la bonne réponse 👇':Q.miss===2?'Encore un essai : plus que deux choix !':'Courage, c’est l’un des deux !';
-      speak(Q.miss===1?'Presque ! Choisis parmi ces réponses.':Q.miss===2?'Plus que deux choix !':'Courage, essaie encore !');
-      const q0=Q;setTimeout(()=>{if(Q!==q0||Q.done)return;const qr=$('qr');qr.style.textDecoration='';Q.stage=next===4?'mc4':'mc2';Q.busy=false;$('qpad').className='hide';setQr();showChoices(next)},1400)}}
+        speak(`${sayEq()}. On continue !`);setTimeout(()=>endQuiz(null),3600)},900)}
+    else if(Q.miss<3){const left=3-Q.miss;$('qmsg').textContent=left===2?'Pas tout à fait… Respire et réessaie !':'Dernier essai au clavier, prends ton temps !';
+      speak(left===2?'Pas tout à fait. Réessaie !':'Dernier essai au clavier !');
+      const q0=Q;setTimeout(()=>Q===q0&&$('qpad').classList.add('rest'),500);setTimeout(()=>{if(Q!==q0||Q.done)return;const qr=$('qr');qr.style.textDecoration='';Q.input='';Q.busy=false;$('qpad').className='';setQr()},2600)}
+    else{const next=Q.miss===3?4:2;$('qmsg').textContent=Q.miss===3?'Presque ! Respire… et choisis la bonne réponse 👇':'Encore un essai : plus que deux choix !';
+      speak(Q.miss===3?'Choisis parmi ces réponses.':'Plus que deux choix !');
+      const q0=Q;setTimeout(()=>{if(Q!==q0||Q.done)return;const qr=$('qr');qr.style.textDecoration='';Q.stage=next===4?'mc4':'mc2';Q.busy=false;$('qpad').className='hide';setQr();showChoices(next)},2600)}}
   const after=unlocked();if(after.length>before){const c=after[after.length-1];newConcepts.push(c.name);setTimeout(()=>{toast(`🎉 Nouveau : ${c.name} !`);SFX.unlock();speak(`Bravo ! Nouvelle étape : ${c.name} !`)},1400)}}
-function endQuiz(tier){$('qcard').classList.add('out');setTimeout(()=>{if(!Q||Q.done)$('quiz').classList.add('hide')},340);
+function endQuiz(tier){lastQuizT=raceT;$('qcard').classList.add('out');setTimeout(()=>{if(!Q||Q.done)$('quiz').classList.add('hide')},340);
   state='race';const p=player;
   if(tier){const sk=SK(p.d);p.boostT=tier.dur*sk.tdur;p.boostMul=1+(tier.mul-1)*sk.tmul;p.fireT=tier===TIERS[0]?1.3:.7;p.kick=Math.min(p.kick+tier.kick,12);big(tier.t,true);SFX.boost(tier===TIERS[0]);if(tier===TIERS[0])setTimeout(SFX.roar,120);shake=tier===TIERS[0]?1:.6}
   else{p.kick=Math.min(p.kick+3,12)}
@@ -911,7 +920,7 @@ function updHud(){const order=[...racers].sort((a,b)=>b.dist-a.dist);const rank=
 
 /* ---------- Course ---------- */
 let state='menu',raceT=0,cdT=0,cdStep=0,combo=0,shake=0,timeScale=1,boostVis=0,hintT=0,endT=0,ringsGot=0,ringsSeen=0,lastTouchHint=0,simT=0;
-function startRace(){ac();makeRacers();Q=null;fireballs.length=0;BOXES.forEach(b=>b.got=-9);updItem();stats=[];raceT=0;combo=0;ringsGot=0;ringsSeen=0;lastRank=0;qStreak=0;newConcepts=[];
+function startRace(){ac();lastQuizT=0;makeRacers();Q=null;fireballs.length=0;BOXES.forEach(b=>b.got=-9);updItem();stats=[];raceT=0;combo=0;ringsGot=0;ringsSeen=0;lastRank=0;qStreak=0;newConcepts=[];
   rings.forEach(r=>{r.got=-9;r.hitT=-9});
   ['menu','end','pause','parents'].forEach(i=>$(i).classList.add('hide'));$('bParents').classList.add('hide');$('quiz').classList.add('hide');$('hud').classList.remove('hide');$('bCal').classList.toggle('hide',SET.ctrl!=='tilt');
   pips();$('combo').textContent='';state='count';cdT=0;cdStep=0;stick.used=false;
@@ -958,7 +967,7 @@ function onRing(r,ring){
       for(let i=0;i<30;i++){const a=i/30*6.28;tv.set(Math.cos(a)*10,Math.sin(a)*10,0).applyQuaternion(ring.q);emit(ring.pos.clone().addScaledVector(tv,.42),tv,.7,1.6+R()*1.2,i%3?0xffd23d:0xfff8e0,2.6)}
       pips();$('combo').textContent=combo>=3?`Série ${combo} ✨`:'';
       if(r.cnt>=PER_Q&&state==='race'){r.cnt=0;setTimeout(()=>{if(state==='race')startQuiz();pips()},150)}}
-    else{combo=0;$('combo').textContent=''}}
+    else{combo=0;$('combo').textContent='';r.cnt++;pips();if(r.cnt>=PER_Q&&state==='race'){r.cnt=0;setTimeout(()=>{if(state==='race')startQuiz();pips()},150)}}}
   else{if(r.fate){r.kick=Math.min(r.kick+3.4,11);r.cnt++;if(r.cnt>=PER_Q){r.cnt=0;r.quizT=1.2+R()*5*(1.15-r.skill)}}}}
 function moveRacer(r,dt){
   const ring=rings[r.ri],ahead=r.lapBase+ring.s-r.dist;let tvx,tvy;
@@ -1073,6 +1082,7 @@ function loop(now){requestAnimationFrame(loop);let rdt=Math.min(.05,(now-last)/1
   if(state==='menu'){for(const r of racers){r.fireT-=rdt;if(r.dist<160)r.dist=160;r.dist+=12*rdt;r.speed=12;r.x=lerp(r.x,Math.sin(now*.0004+r.ph)*6,.02);r.y=Math.sin(now*.0005+r.ph)*3;poseRacer(r,rdt)}}
   else{
     if(state==='count'){cdT+=rdt;if(cdT>=1.2+cdStep&&cdStep<4){const t=['3','2','1','Partez !'][cdStep];big(t,cdStep===3);cdStep===3?SFX.go():SFX.beep();if(cdStep===3){calibrate();state='race';hintT=5;speak(`Allez ${SET.name} !`);const h=$('hint');h.innerHTML='✨ 6 anneaux d\'or = une question = 🔥 TURBO !';h.classList.remove('hide')}cdStep++}}
+    if(state==='race'&&player&&!player.finishT&&raceT-lastQuizT>QUIZ_MAX){lastQuizT=raceT;player.cnt=0;toast('❓ Question surprise !');startQuiz();pips()}
     if(state!=='end'){raceT+=dt;for(const r of racers){moveRacer(r,dt);poseRacer(r,state==='quiz'?rdt*.35:dt)}}
     else for(const r of racers)poseRacer(r,rdt);
     if(state==='done'){endT+=rdt;if(endT>3.2)showEnd()}
